@@ -11,7 +11,10 @@ const {
 } = require('./middleware');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const {jwtSecret, AUTH_TYPE, cookieName, userTable} = require('./config');
+const {
+  jwtSecret, AUTH_TYPE, cookieName, userTable,
+  adminPermissionLevel,
+} = require('./config');
 const urlParser = require('url');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -104,7 +107,7 @@ users.get('/is_authed', [
 
 users.get('/list_users', [
   useAuth,
-  minimumPermissionLevelRequired(7),
+  minimumPermissionLevelRequired(adminPermissionLevel),
   (req, res) => {
     selectQuery(userTable, ['username', 'email', 'numlogins', 'lastlogin', 'permissionlevel'], {})
       .then((result) => {
@@ -125,12 +128,6 @@ const getTokens = (req) => {
   return {accessToken, refreshToken};
 }
 
-// use like:
-// comments.post('/comment', [
-//   useAuth,
-//   minimumPermissionLevelRequired(0),
-//   postComment,
-// ]);
 
 // -------------------------------------------------------------------------
 // Blog

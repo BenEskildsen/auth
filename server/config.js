@@ -4,4 +4,5 @@ module.exports = {
   AUTH_TYPE: 'JWT', // || 'COOKIE'
   cookieName: 'benAuthCookie',
   userTable: 'users',
+  adminPermissionLevel: 7,
 };
