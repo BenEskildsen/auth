@@ -1,0 +1,12 @@
+  - testing:
+    - test having some resource only accessible by:
+      - anyone logged in
+      - anyone with admin permission level
+      - cookie vs jwt for both of those
+
+  - middleware:
+    - re-implement recordVisit
+
+  - admin panel:
+    - admin login for it
+    - page for viewing/editing

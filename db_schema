@@ -1,0 +1,19 @@
+
+create table users (
+  username varchar(50) primary key,
+  password varchar(150) not null,
+  permissionlevel integer default 1,
+  email varchar(80),
+  numLogins integer default 1,
+  createdat timestamp default current_timestamp,
+  lastLogin timestamp
+);
+
+create table comments (
+  id serial primary key,
+  username varchar(50),
+  thread varchar(100),
+  comment text,
+  createdat timestamp default current_timestamp
+);
+

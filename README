@@ -1,0 +1,20 @@
+To set up:
+  - clone this
+  - create a .secrets.js file with jwtSecret: [SOMESTRING] and the dbURL
+  - modify the dbSchema based on how you want users
+  - create the users table
+  - add an admin user by modifying the create function on the server.js to have max permission level
+    > curl -d "username=admin&password=100bones" localhost:8000/auth/create
+
+
+Main authentication types:
+  - JWT:
+    - pros:
+      - fully implemented and secure
+    - cons:
+      - single page only -- can't figure out how to send a jwt to another page
+  - Cookies:
+    - pros:
+      - easy to use across pages
+    - cons:
+      - harder to check that the cookie is valid and not just existing/unexpired
