@@ -6,8 +6,8 @@ const {
 } = require('./dbUtils');
 const {
   validJWTNeeded, validCookieNeeded,
-  minimumPermissionLevelRequired,
-  recordVisit,
+  minimumPermissionLevelNeeded,
+  thisUserOrAdminNeeded
 } = require('./middleware');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
@@ -42,7 +42,7 @@ users.post('/create', (req, res) => {
   req.body.password = salt + "$" + hash;
   const {username, password, email} = req.body;
 
-  writeQuery(userTable, {username, password, email, permissionLevel: 1})
+  writeQuery(userTable, {username, password, email: email ?? null, permissionLevel: 1})
     .then(() => {
       const tokens = getTokens(req);
       if (AUTH_TYPE == 'COOKIE') {
@@ -75,7 +75,7 @@ users.post('/login', (req, res) => {
           if (AUTH_TYPE == 'COOKIE') {
             res.cookie(cookieName, tokens.accessToken);
           }
-          res.status(201).send(tokens);
+          res.status(200).send(tokens);
         } else {
           res.status(400).send({error: 'Incorrect password'});
         }
@@ -91,10 +91,19 @@ users.post('/login', (req, res) => {
 
 users.post('/update', [
   useAuth,
+  thisUserOrAdminNeeded,
   (req, res) => {
-    // TODO: check that you are logged in as the user you want to change
     // TODO: do the update query
-    res.status(404).send({error: 'Not yet implemented'});
+    res.status(200).send(true);
+  }
+]);
+
+users.post('/delete', [
+  useAuth,
+  thisUserOrAdminNeeded,
+  (req, res) => {
+    // TODO: do the update query
+    res.status(200).send(true);
   }
 ]);
 
@@ -107,7 +116,7 @@ users.get('/is_authed', [
 
 users.get('/list_users', [
   useAuth,
-  minimumPermissionLevelRequired(adminPermissionLevel),
+  minimumPermissionLevelNeeded(adminPermissionLevel),
   (req, res) => {
     selectQuery(userTable, ['username', 'email', 'numlogins', 'lastlogin', 'permissionlevel'], {})
       .then((result) => {
@@ -145,7 +154,6 @@ if (port != 80) {
   // })
 }
 
-auth.use(recordVisit);
 auth.use(express.static(path.join(__dirname, '../www')));
 auth.use(express.json());
 auth.use(cors());

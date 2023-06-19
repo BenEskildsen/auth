@@ -1,12 +1,14 @@
-  - testing:
-    - test having some resource only accessible by:
-      - anyone logged in
-      - anyone with admin permission level
-      - cookie vs jwt for both of those
 
-  - middleware:
-    - re-implement recordVisit
+  - add rest apis for:
+    - update user
+    - delete user
+
+
+  - add clientside apis for
+    - test them with cookies
+
 
   - admin panel:
+    - react stuff
     - admin login for it
-    - page for viewing/editing
+    - table for viewing/editing users
