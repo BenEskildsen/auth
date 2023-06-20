@@ -19,7 +19,7 @@ const path = require('path');
 const port = process.env.PORT || 8000;
 
 process.on('uncaughtException', function (err) {
-      console.log(err);
+  console.log(err);
 });
 
 // -------------------------------------------------------------------------
@@ -64,15 +64,6 @@ users.get('/list_users', [
   permissionRequired(adminPermissionLevel),
   listUsers,
 ]);
-
-
-// -------------------------------------------------------------------------
-// Dashboard
-// -------------------------------------------------------------------------
-const dashboard = express();
-console.log(__dirname);
-
-// dashboard.get('/dashboard
 
 // -------------------------------------------------------------------------
 // App
