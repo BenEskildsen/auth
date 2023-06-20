@@ -1,6 +1,6 @@
 //const axios = require('axios');
 import axios from 'axios';
-const {authURL, cookieName, AUTH_TYPE} = require('../../server/config');
+const {authURL, cookieName, AUTH_TYPE} = require('./config');
 
 let axiosInstance = axios.create({
   baseURL: authURL,
@@ -25,9 +25,10 @@ const createUser = (user) => {
   return axiosInstance.post('/auth/create', {
     ...user,
   }).then((res) => {
-    if (AUTH_TYPE == 'JWT') {
-      axiosInstance.defaults.headers.common.Authorization = `Bearer ${res.data.accessToken}`;
-    }
+    // automatically log in created user:
+    // if (AUTH_TYPE == 'JWT') {
+    //   axiosInstance.defaults.headers.common.Authorization = `Bearer ${res.data.accessToken}`;
+    // }
     return res.data;
     // how to redirect to a new page
     // location.assign(location.origin + '/projects/?id=' + res.data.data._id);

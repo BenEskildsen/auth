@@ -2401,7 +2401,7 @@ var _default = toFormData;
 exports.default = _default;
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"../core/AxiosError.js":9,"../platform/node/classes/FormData.js":30,"../utils.js":43,"buffer":45}],36:[function(require,module,exports){
+},{"../core/AxiosError.js":9,"../platform/node/classes/FormData.js":30,"../utils.js":43,"buffer":78}],36:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3460,6 +3460,3380 @@ function fromByteArray (uint8) {
 }
 
 },{}],45:[function(require,module,exports){
+const React = require('react');
+const Button = require('./Button.react');
+const {
+  useState,
+  useEffect,
+  useMemo
+} = React;
+
+/**
+ * Props:
+ *
+ * audioFiles, // array of {path, type} pairs
+ * isMuted, // optional boolean for outside control of this widget
+ * setIsMuted, // optional function called when this is toggled
+ * isShuffled, // optional boolean for whether audio should play in random order
+ * style, // optional object of css styles
+ *
+ */
+
+const AudioWidget = props => {
+  const [isMuted, setIsMuted] = useState(!!props.isMuted);
+  const [playIndex, setPlayIndex] = useState(0);
+  const playOrder = useMemo(() => {
+    let array = props.audioFiles.map((a, i) => i);
+    if (props.isShuffled) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+      }
+      // initialOrder.sort(() => (Math.random() > 0.5) ? 1 : -1)
+    }
+
+    return array;
+  }, [props.audioFiles]);
+  let widgetStyle = {
+    margin: 5,
+    borderRadius: 8,
+    left: 5
+  };
+
+  // player
+  const audioPlayer = useMemo(() => {
+    const a = new Audio(props.audioFiles[playIndex].path);
+    return a;
+  }, [playIndex, isMuted, props.audioFiles]);
+  useEffect(() => {
+    if (!isMuted) {
+      audioPlayer.addEventListener('loadeddata', () => {
+        audioPlayer.play();
+        setTimeout(() => setPlayIndex((playIndex + 1) % props.audioFiles.length), audioPlayer.duration * 1000);
+      });
+    }
+    return () => {
+      audioPlayer.pause();
+    };
+  }, [playIndex, isMuted, props.audioFiles, audioPlayer]);
+  return /*#__PURE__*/React.createElement("div", {
+    style: props.style ? props.style : widgetStyle
+  }, /*#__PURE__*/React.createElement(Button, {
+    label: isMuted ? 'Turn Music ON' : 'Turn Music OFF',
+    onClick: () => {
+      audioPlayer.pause();
+      setIsMuted(!isMuted);
+      if (props.setIsMuted) {
+        props.setIsMuted(!isMuted);
+      }
+    }
+  }));
+};
+module.exports = AudioWidget;
+},{"./Button.react":47,"react":87}],46:[function(require,module,exports){
+function _extends() { _extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return _extends.apply(this, arguments); }
+const React = require('react');
+const CheckerBackground = require('./CheckerBackground.react.js');
+const DragArea = require('./DragAreaDeprecated.react.js');
+const {
+  useState,
+  useEffect,
+  useMemo,
+  useReducer
+} = React;
+
+/**
+ *  Props:
+ *    - pixelSize: {width, height}, // board size in pixels
+ *    - gridSize: {width, height}, // board size in squares
+ *    - pieces: Array<{id, position, ?size, ?disabled, sprite}>
+ *    - background: HTML, // background div
+ *    - onPiecePickup: (id, position) => void, // board position
+ *    - onMoveCancel: (id) => void, // NOTE: must setTimeout any state updates here
+ *    - onPieceMove: (id, position) => void, // board position
+ *    - isMoveAllowed: (id, position) => void, // board position
+ *
+ *  Props for pieces:
+ *    - sprite: see SpriteSheet.react
+ */
+
+const Board = props => {
+  const id = props.id ?? "Board";
+  const {
+    pixelSize,
+    gridSize,
+    pieces
+  } = props;
+  const cellWidth = pixelSize.width / gridSize.width;
+  const cellHeight = pixelSize.height / gridSize.height;
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'relative'
+    }
+  }, props.background ?? /*#__PURE__*/React.createElement(CheckerBackground, {
+    style: {
+      marginTop: 1,
+      marginLeft: 1
+    },
+    color1: "#6B8E23",
+    color2: "#FFFAF0",
+    pixelSize: pixelSize,
+    gridSize: gridSize
+  }), /*#__PURE__*/React.createElement(DragArea, {
+    isDropAllowed: (id, position) => {
+      if (!props.isMoveAllowed) return true;
+      const x = Math.round(position.x / cellWidth);
+      const y = Math.round(position.y / cellHeight);
+      return props.isMoveAllowed(id, {
+        x,
+        y
+      });
+    },
+    onDrop: (id, position) => {
+      if (!props.onPieceMove) return;
+      const x = Math.round(position.x / cellWidth);
+      const y = Math.round(position.y / cellHeight);
+      props.onPieceMove(id, {
+        x,
+        y
+      });
+    },
+    onPickup: (id, position) => {
+      if (!props.onPiecePickup) return;
+      const x = Math.round(position.x / cellWidth);
+      const y = Math.round(position.y / cellHeight);
+      props.onPiecePickup(id, {
+        x,
+        y
+      });
+    },
+    onCancel: id => {
+      if (!props.onMoveCancel) return;
+      props.onMoveCancel(id);
+    },
+    id: id,
+    snapX: cellWidth,
+    snapY: cellHeight,
+    style: {
+      border: '1px solid black',
+      ...(props.style ?? {}),
+      ...pixelSize
+    }
+  }, pieces.map(p => {
+    return /*#__PURE__*/React.createElement(Piece, _extends({
+      key: p.id,
+      cellWidth: cellWidth,
+      cellHeight: cellHeight
+    }, p));
+  })));
+};
+const Piece = props => {
+  const {
+    cellWidth,
+    cellHeight
+  } = props;
+  const size = props.size ?? {
+    width: 1,
+    height: 1
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    id: props.id,
+    disabled: props.disabled,
+    style: {
+      top: props.position.y * cellHeight,
+      left: props.position.x * cellWidth,
+      width: size.width * cellWidth,
+      height: size.height * cellHeight,
+      position: 'absolute'
+    }
+  }, props.sprite);
+};
+module.exports = Board;
+},{"./CheckerBackground.react.js":50,"./DragAreaDeprecated.react.js":52,"react":87}],47:[function(require,module,exports){
+const React = require('react');
+const {
+  useState,
+  useEffect
+} = React;
+
+// props:
+// id: ?string
+// label: string
+// onClick: () => void
+// onMouseDown: optional () => void
+// onMouseUp: optional () => void
+// disabled: optional boolean
+// style: optional Object
+// hoverCard: optional JSX
+
+function Button(props) {
+  const id = props.id || props.label;
+  const touchFn = () => {
+    if (props.onMouseDown != null) {
+      props.onMouseDown();
+    } else {
+      props.onClick();
+    }
+  };
+  const [intervalID, setIntervalID] = useState(null);
+  const [hover, setHover] = useState(false);
+  let hoverDisplay = null;
+  if (hover) {
+    hoverDisplay = /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: 'relative'
+      }
+    }, props.hoverCard);
+  }
+  return /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    style: {
+      touchAction: 'initial',
+      fontSize: '18px',
+      ...props.style
+    },
+    key: id || label,
+    className: props.disabled ? 'buttonDisable' : '',
+    id: id.toUpperCase() + '_button',
+    onClick: props.disabled ? () => {} : props.onClick,
+    onTouchStart: ev => {
+      ev.preventDefault();
+      if (props.disabled) {
+        return;
+      }
+      if (intervalID) {
+        console.log("already in interval, clearing");
+        clearInterval(intervalID);
+        setIntervalID(null);
+      }
+      touchFn();
+      // HACK: if you set the right condition, allow repetive presses
+      if (false) {
+        const interval = setInterval(touchFn, 120);
+        setIntervalID(interval);
+      }
+    },
+    onTouchEnd: ev => {
+      ev.preventDefault();
+      clearInterval(intervalID);
+      setIntervalID(null);
+      props.onMouseUp;
+    },
+    onTouchCancel: ev => {
+      clearInterval(intervalID);
+      setIntervalID(null);
+      props.onMouseUp;
+    },
+    onTouchMove: ev => {
+      ev.preventDefault();
+    },
+    onMouseDown: props.onMouseDown,
+    onMouseUp: props.onMouseUp,
+    onMouseEnter: () => {
+      if (props.hoverCard) setHover(true);
+    },
+    onMouseLeave: () => {
+      setHover(false);
+    },
+    disabled: props.disabled
+  }, props.label, hoverDisplay);
+}
+module.exports = Button;
+},{"react":87}],48:[function(require,module,exports){
+const React = require('react');
+const {
+  useResponsiveDimensions
+} = require('./hooks');
+const {
+  useEffect,
+  useState,
+  useMemo,
+  Component
+} = React;
+function Canvas(props) {
+  let {
+    useFullScreen,
+    // only necessary if not useFullScreen
+    width,
+    height,
+    view,
+    // {x, y, width, height} of the world coordinates for the canvas
+    // independent of the canvas element's width/height
+
+    style,
+    // style overrides
+
+    id,
+    // optional if you have multiple canvases on the same page
+
+    onResize // optional function called when the canvas resizes
+  } = props;
+  const [windowWidth, windowHeight] = useResponsiveDimensions(onResize);
+
+  // maintain canvas context sizing
+  // useEffect(() => {
+  //   const canvas = document.getElementById(id || "canvas");
+  //   if (!canvas) return;
+  //   const ctx = canvas.getContext("2d");
+
+  //   ctx.restore(); // restore from previous resizing
+  //   ctx.save();
+  //   if (view && view.x != null && view.y != null) {
+  //     ctx.translate(view.x, view.y);
+  //   }
+  // }, [width, height, view, useFullScreen, windowWidth, windowHeight]);
+
+  return /*#__PURE__*/React.createElement("div", {
+    id: "canvasWrapper",
+    style: {
+      width: useFullScreen ? windowWidth : width,
+      height: useFullScreen ? windowHeight : height
+    }
+  }, /*#__PURE__*/React.createElement("canvas", {
+    id: id || "canvas",
+    style: {
+      cursor: 'pointer',
+      width: useFullScreen ? windowWidth : width,
+      height: useFullScreen ? windowHeight : height,
+      ...(style ? style : {})
+    },
+    width: view && view.width ? view.width : width,
+    height: view && view.height ? view.height : height
+  }));
+}
+module.exports = Canvas;
+},{"./hooks":67,"react":87}],49:[function(require,module,exports){
+const React = require('react');
+
+/**
+ * Props:
+ *  label: ?string
+ *  checked: boolean
+ *  onChange: (value: boolean) => void
+ *  style: ?Object
+ */
+function Checkbox(props) {
+  const {
+    checked,
+    label,
+    onChange,
+    style
+  } = props;
+  const checkbox = /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: checked,
+    onChange: () => {
+      onChange(!checked);
+    }
+  });
+  if (label == null) {
+    return checkbox;
+  } else {
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'inline-block',
+        ...style
+      }
+    }, checkbox, label);
+  }
+}
+module.exports = Checkbox;
+},{"react":87}],50:[function(require,module,exports){
+const React = require('react');
+
+/**
+ *  Props:
+ *    - color1: cssColor,
+ *    - color2: cssColor,
+ *    - pixelSize: {width, height}, // board size in pixels
+ *    - gridSize: {width, height}, // board size in squares
+ */
+const CheckerBackground = props => {
+  const {
+    color1,
+    color2,
+    pixelSize,
+    gridSize
+  } = props;
+  const cellWidth = pixelSize.width / gridSize.width;
+  const cellHeight = pixelSize.height / gridSize.height;
+  const squares = [];
+  for (let y = 0; y < gridSize.height; y++) {
+    for (let x = 0; x < gridSize.width; x++) {
+      let backgroundColor = x % 2 == 1 ? color1 : color2;
+      if (y % 2 == 1) {
+        backgroundColor = x % 2 == 0 ? color1 : color2;
+      }
+      squares.push( /*#__PURE__*/React.createElement("div", {
+        key: "checker_" + x + "_" + y,
+        style: {
+          width: cellWidth,
+          height: cellHeight,
+          backgroundColor
+        }
+      }));
+    }
+  }
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      position: 'absolute',
+      width: pixelSize.width,
+      height: pixelSize.height,
+      ...(props.style ?? {})
+    }
+  }, squares);
+};
+module.exports = CheckerBackground;
+},{"react":87}],51:[function(require,module,exports){
+const React = require('react');
+function Divider(props) {
+  const {
+    style
+  } = props;
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: '100%',
+      height: '0px',
+      border: '1px solid black',
+      ...style
+    }
+  });
+}
+module.exports = Divider;
+},{"react":87}],52:[function(require,module,exports){
+const React = require('react');
+const {
+  useMouseHandler,
+  mouseReducer,
+  useEnhancedReducer
+} = require('./hooks');
+const {
+  add,
+  subtract
+} = require('bens_utils').vectors;
+const {
+  clamp
+} = require('bens_utils').math;
+const {
+  useEffect,
+  useState,
+  useMemo
+} = React;
+
+/**
+ * TODO:
+ */
+
+/*
+ *  Props:
+ *    id: string,
+ *    style: object, // optional styling for the drag area
+ *    snapX: number, // nearest multiple to snap to
+ *    snapY: number,
+ *    isDropAllowed: (id, position) => boolean,
+ *    onDrop: (id, position) => void,
+ *    onPickup: (id, position) => void,
+ *    onCancel: (id) => void,
+ *  Children Props:
+ *    id: string,
+ *    disabled: optional boolean, // not draggable
+ *    style: {top, left, width, height}
+ */
+
+const DragArea = props => {
+  var _state$mouse;
+  const id = props.id ? props.id : "dragArea";
+  let children = props.children.length ? props.children : [props.children];
+  // let children = props.children;
+
+  // check for new draggables or removed draggables
+  useEffect(() => {
+    dispatch({
+      draggables: children.map(c => {
+        const elem = document.getElementById(c.props.id);
+        if (!elem) return null;
+        return {
+          id: c.props.id,
+          disabled: c.props.disabled,
+          style: {
+            top: parseInt(elem.style.top),
+            left: parseInt(elem.style.left),
+            width: parseInt(elem.style.width),
+            height: parseInt(elem.style.height)
+          }
+        };
+      }).filter(e => e != null).reverse()
+    });
+    children.forEach(c => {
+      const elem = document.getElementById(c.props.id);
+      elem.style["pointer-events"] = "none";
+    });
+  }, [children]);
+
+  // handle state of everything
+  const [state, dispatch, getState] = useEnhancedReducer((state, action) => {
+    switch (action.type) {
+      case 'SET_DRAGGABLE':
+        {
+          const {
+            id,
+            position,
+            selectedID,
+            selectedOffset
+          } = action;
+          let nextDraggables = [];
+          for (const draggable of state.draggables) {
+            if (draggable.id == id) {
+              nextDraggables.push({
+                ...draggable,
+                style: {
+                  ...draggable.style,
+                  top: position.y,
+                  left: position.x
+                }
+              });
+            } else {
+              nextDraggables.push(draggable);
+            }
+          }
+          return {
+            ...state,
+            draggables: nextDraggables,
+            selectedID: selectedID !== undefined ? selectedID : state.selectedID,
+            selectedOffset: selectedOffset !== undefined ? selectedOffset : state.selectedOffset
+          };
+        }
+      case 'SET_MOUSE_DOWN':
+      case 'SET_MOUSE_POS':
+        return {
+          ...state,
+          mouse: mouseReducer(state.mouse, action)
+        };
+    }
+    return state;
+  }, {
+    mouse: null,
+    selectedID: null,
+    draggables: [],
+    selectedOffset: null
+  });
+
+  // drag handling
+  useMouseHandler(id, {
+    dispatch,
+    getState
+  }, {
+    mouseMove: (state, dispatch, pixel) => {
+      if (!state.selectedID) return;
+      let draggable = null;
+      for (const d of state.draggables) {
+        if (d.id == state.selectedID) draggable = d;
+      }
+      if (!draggable) return;
+      const nextPosition = clampToArea(id, subtract(pixel, state.selectedOffset), draggable.style);
+      dispatch({
+        type: 'SET_DRAGGABLE',
+        id: state.selectedID,
+        position: nextPosition
+      });
+    },
+    mouseLeave: (state, dispatch) => {
+      if (!state.selectedID) return;
+      const id = state.selectedID;
+      dispatch({
+        type: 'SET_DRAGGABLE',
+        id: state.selectedID,
+        position: subtract(state.mouse.downPixel, state.selectedOffset)
+      });
+      dispatch({
+        selectedID: null,
+        selectedOffset: null
+      });
+      dispatch({
+        type: 'SET_MOUSE_DOWN',
+        isDown: false,
+        isLeft: true
+      });
+      if (props.onCancel) props.onCancel(id);
+    },
+    leftDown: (state, dispatch, pixel) => {
+      for (const draggable of state.draggables) {
+        if (clickedInElem(pixel, draggable.style) && !draggable.disabled) {
+          const selectedOffset = {
+            x: pixel.x - draggable.style.left,
+            y: pixel.y - draggable.style.top
+          };
+          dispatch({
+            selectedID: draggable.id,
+            selectedOffset
+          });
+          if (props.onPickup) props.onPickup(draggable.id, pixel);
+          return;
+        }
+      }
+    },
+    leftUp: (state, dispatch, pixel) => {
+      if (!state.selectedID) return;
+      const id = state.selectedID;
+      let draggable = null;
+      for (const d of state.draggables) {
+        if (d.id == state.selectedID) draggable = d;
+      }
+      let dropPosition = pixel;
+      if (draggable && (props.snapX || props.snapY)) {
+        let snapX = props.snapX ?? 1;
+        let snapY = props.snapY ?? 1;
+        const x = Math.round(draggable.style.left / snapX) * snapX;
+        const y = Math.round(draggable.style.top / snapY) * snapY;
+        dropPosition = {
+          x,
+          y
+        };
+      } else {
+        // only care about the mouse offset when we're not snapping
+        dropPosition = subtract(dropPosition, state.selectedOffset);
+      }
+      if (props.isDropAllowed && !props.isDropAllowed(state.selectedID, dropPosition)) {
+        dispatch({
+          type: 'SET_DRAGGABLE',
+          id: state.selectedID,
+          position: subtract(state.mouse.downPixel, state.selectedOffset),
+          selectedID: null,
+          selectedOffset: null
+        });
+        if (props.onCancel) props.onCancel(id);
+      } else {
+        dispatch({
+          type: 'SET_DRAGGABLE',
+          id: state.selectedID,
+          position: dropPosition,
+          selectedID: null,
+          selectedOffset: null
+        });
+        if (props.onDrop) props.onDrop(id, dropPosition);
+      }
+    }
+  });
+
+  // update element positions based on state
+  useEffect(() => {
+    for (const draggable of state.draggables) {
+      const elem = document.getElementById(draggable.id);
+      if (!elem) continue;
+      // HACK: enfore snap not always working
+      let snapX = props.snapX ?? 1;
+      let snapY = props.snapY ?? 1;
+      if (state.selectedID) {
+        snapX = 1;
+        snapY = 1;
+      }
+      elem.style.left = Math.round(draggable.style.left / snapX) * snapX;
+      elem.style.top = Math.round(draggable.style.top / snapY) * snapY;
+      if (draggable.id == state.selectedID) {
+        elem.style.zIndex = 5;
+      } else {
+        elem.style.zIndex = 1;
+      }
+    }
+  }, [state.draggables, state.selectedID]);
+  return /*#__PURE__*/React.createElement("div", {
+    id: id,
+    style: {
+      cursor: state !== null && state !== void 0 && (_state$mouse = state.mouse) !== null && _state$mouse !== void 0 && _state$mouse.isLeftDown && state.selectedID ? 'grabbing' : 'grab',
+      position: 'relative',
+      ...(props.style ? props.style : {})
+    }
+  }, children);
+};
+const clickedInElem = (pixel, style) => {
+  return pixel.x >= style.left && pixel.x <= style.left + style.width && pixel.y >= style.top && pixel.y <= style.top + style.height;
+};
+const clampToArea = (dragAreaID, pixel, style) => {
+  const dragArea = document.getElementById(dragAreaID);
+  const {
+    width,
+    height
+  } = dragArea.getBoundingClientRect();
+  return {
+    x: clamp(pixel.x, 0, width - style.width),
+    y: clamp(pixel.y, 0, height - style.height)
+  };
+};
+module.exports = DragArea;
+},{"./hooks":67,"bens_utils":77,"react":87}],53:[function(require,module,exports){
+const React = require('react');
+
+/**
+ * Props:
+ * options: Array<string>
+ * displayOptions: ?Array<string>
+ * selected: string // which option is selected
+ * onChange: (string) => void
+ * style: ?Object
+ */
+const Dropdown = function (props) {
+  const {
+    options,
+    selected,
+    onChange,
+    displayOptions,
+    style
+  } = props;
+  const optionTags = options.map((option, i) => {
+    const label = displayOptions != null && displayOptions[i] != null ? displayOptions[i] : option;
+    return /*#__PURE__*/React.createElement("option", {
+      key: 'option_' + option,
+      value: option
+    }, label);
+  });
+  return /*#__PURE__*/React.createElement("select", {
+    onChange: ev => {
+      const val = ev.target.value;
+      onChange(val);
+    },
+    value: selected,
+    style: style ? {
+      ...style
+    } : {}
+  }, optionTags);
+};
+module.exports = Dropdown;
+},{"react":87}],54:[function(require,module,exports){
+const React = require('react');
+const {
+  useEffect,
+  useRef
+} = React;
+
+/**
+ *
+ * props:
+ *   value: number, // will watch for changes in this value
+ *   minChange: ?number, // changes smaller than this won't be registered
+ */
+
+const Indicator = props => {
+  const prev = usePrevious(props.value);
+  const minChange = props.minChange ? props.minChange : 0;
+  let change = props.value - prev;
+  let color = 'black';
+  let symbol = '-';
+  if (Math.abs(change) > minChange) {
+    if (change > 0) {
+      color = 'green';
+      symbol = '/\\';
+    } else {
+      color = 'red';
+      symbol = '\\/';
+    }
+  }
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'inline',
+      color,
+      fontFamily: 'Times',
+      fontSize: 15
+    }
+  }, /*#__PURE__*/React.createElement("b", null, symbol));
+};
+const usePrevious = value => {
+  const ref = useRef();
+  useEffect(() => {
+    ref.current = value;
+  });
+  return ref.current;
+};
+module.exports = Indicator;
+},{"react":87}],55:[function(require,module,exports){
+const React = require('react');
+const InfoCard = props => {
+  const overrideStyle = props.style || {};
+  const underrideStyle = props.underrideStyle || {};
+  return /*#__PURE__*/React.createElement("div", {
+    id: props.id ? props.id : '',
+    style: {
+      ...underrideStyle,
+      border: props.border != null ? props.border : '1px solid black',
+      backgroundColor: 'white',
+      opacity: props.opacity != null ? props.opacity : 1,
+      // width: 200,
+      // height: 148,
+      verticalAlign: 'top',
+      marginBottom: 4,
+      marginLeft: 4,
+      display: 'inline-block',
+      padding: 4,
+      ...overrideStyle
+    }
+  }, props.children);
+};
+module.exports = InfoCard;
+},{"react":87}],56:[function(require,module,exports){
+const React = require('react');
+const Button = require('./Button.react');
+const Divider = require('./Divider.react');
+
+/*
+type Props = {
+  title: ?string,
+  body: ?string,
+  dismiss: ?() => void, // if provided, will display an X
+                        // and call this fn on click
+  buttons: Array<{
+    label: string,
+    onClick: () => void,
+  }>,
+  style: ?Object,
+  height: ?number,
+};
+*/
+
+function Modal(props) {
+  const {
+    title,
+    body,
+    dismiss,
+    buttons,
+    style,
+    buttonStyle
+  } = props;
+  const modalButtons = buttons ? buttons : [];
+  const overrideStyle = style ? style : {};
+  const overrideButtonStyle = buttonStyle ? buttonStyle : {};
+  const buttonHTML = modalButtons.map(b => {
+    return /*#__PURE__*/React.createElement(Button, {
+      key: "b_" + b.label,
+      disabled: !!b.disabled,
+      label: b.label,
+      onClick: b.onClick,
+      style: b.style || {}
+    });
+  });
+  const rect = document.getElementById('container').getBoundingClientRect();
+  const width = props.width ? props.width : Math.min(rect.width * 0.8, 350);
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'absolute',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '100%',
+      height: '100%',
+      top: 0,
+      left: 0,
+      zIndex: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      backgroundColor: 'whitesmoke',
+      border: '1px solid black',
+      boxSizing: 'border-box',
+      boxShadow: '2px 2px #666666',
+      borderRadius: 3,
+      color: '#46403a',
+      textAlign: 'center',
+      width,
+      ...overrideStyle
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: '1.2em'
+    }
+  }, /*#__PURE__*/React.createElement("b", null, title), /*#__PURE__*/React.createElement(Button, {
+    label: "\u274C",
+    style: {
+      display: dismiss ? 'inline' : 'none',
+      border: 'none',
+      backgroundColor: 'inherit',
+      float: 'right',
+      cursor: 'pointer',
+      fontSize: 10
+    },
+    onClick: dismiss
+  })), body, modalButtons.length > 0 ? /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(Divider, {
+    style: {
+      marginTop: 4,
+      marginBottom: 4
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginBottom: 4,
+      ...overrideButtonStyle
+    }
+  }, buttonHTML)) : null));
+}
+module.exports = Modal;
+},{"./Button.react":47,"./Divider.react":51,"react":87}],57:[function(require,module,exports){
+const React = require('react');
+const {
+  useState,
+  useMemo,
+  useEffect
+} = React;
+
+/**
+ * props:
+ * value: number
+ * onChange: (number) => void,
+ * onlyInt: boolean, // only allow ints instead of floats
+ * width: number,
+ * submitOnEnter: boolean, // not implemented -- hard to play nice w/other keys
+ * submitOnBlur: boolean,
+ * disabled: ?boolean,
+ */
+const NumberField = props => {
+  const {
+    value,
+    onChange,
+    onlyInt,
+    submitOnEnter,
+    submitOnBlur
+  } = props;
+  const [stateValue, setValue] = useState(value);
+  useEffect(() => {
+    setValue(value);
+  }, [value]);
+  const [isFocused, setFocus] = useState(false);
+  useEffect(() => {
+    // document.onkeydown = (ev) => {
+    //   if (ev.keyCode == 13)  { // Enter
+    //     if (isFocused) {
+    //       submitValue(onChange, stateValue, onlyInt);
+    //     }
+    //   }
+    // };
+  }, [isFocused, stateValue]);
+  return /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    style: {
+      width: props.width != null ? props.width : 40
+    },
+    value: stateValue,
+    onFocus: () => {
+      setFocus(true);
+    },
+    onBlur: () => {
+      setFocus(false);
+      if (submitOnBlur) {
+        submitValue(onChange, stateValue, onlyInt);
+      }
+    },
+    onChange: ev => {
+      if (props.disabled) {
+        setValue(value);
+        return;
+      }
+      const nextVal = ev.target.value;
+      if (isNaN(Number(nextVal))) return; // don't allow non-numerical input
+      setValue(nextVal);
+      if (!submitOnEnter && !submitOnBlur) {
+        submitValue(onChange, nextVal, onlyInt);
+      }
+    }
+  });
+};
+const submitValue = (onChange, nextVal, onlyInt) => {
+  if (nextVal === '') {
+    onChange(0);
+  } else if (!onlyInt && nextVal[nextVal.length - 1] === '.') {
+    onChange(parseFloat(nextVal + '0'));
+  } else if (isNaN(Number(nextVal))) {
+    return; // ignore NaNs
+  } else {
+    const num = onlyInt ? parseInt(nextVal) : parseFloat(nextVal);
+    onChange(num);
+  }
+};
+module.exports = NumberField;
+},{"react":87}],58:[function(require,module,exports){
+function _extends() { _extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return _extends.apply(this, arguments); }
+/**
+ * See ~/Code/teaching/clusters for an example of how to use the plot
+ * Specifically ui/Main and reducers/plotReducer
+ */
+
+const React = require('react');
+const Button = require('./Button.react');
+const Canvas = require('./Canvas.react');
+const {
+  useState,
+  useMemo,
+  useEffect,
+  useReducer
+} = React;
+
+// type Point = {
+//   x: number,
+//   y: number,
+//   color: ?string, // css color
+// };
+//
+// type Axis = {
+//   dimension: 'x' | 'y',
+//   label: string,
+//   min: ?number,
+//   max: ?number,
+//   adaptiveRange: ?boolean, // min/max adapt to the given points
+//   hidden: ?boolean, // don't render the axis
+//   majorTicks: ?number,
+//   minorTicks: ?number,
+// };
+
+/**
+ * NOTE: 0, 0 is the bottom left corner
+ *
+ * props:
+ *   points: Array<Point>,
+ *   xAxis: Axis,
+ *   yAxis: Axis,
+ *   isLinear: boolean,
+ *   watch: ?number, // if provided, will watch for changes in this value
+ *                   // and add a point to the plot whenever it changes
+ *                   // up to a maximum number of points equal to the xAxis size
+ *   changeOnly: ?boolean, // a watch prop, only add a point if watched prop changes
+ *   inline: ?boolean,
+ *
+ * canvas props:
+ *   canvasID: ?string, // for when there's multiple plots
+ *   useFullScreen: boolean, // overriden by width and height
+ *   width: number,
+ *   height: number,
+ */
+
+const Plot = props => {
+  // screen resizing
+  const [resizeCount, setResize] = useState(0);
+  useEffect(() => {
+    function handleResize() {
+      setResize(resizeCount + 1);
+    }
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [resizeCount]);
+
+  // rendering
+  useEffect(() => {
+    const canvas = document.getElementById(props.canvasID || 'canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const {
+      xAxis,
+      yAxis,
+      isLinear
+    } = props;
+    const {
+      width,
+      height
+    } = canvas.getBoundingClientRect();
+    let xmax = xAxis.max == null ? 10 : xAxis.max;
+    let xmin = xAxis.min == null ? 0 : xAxis.min;
+    let ymax = yAxis.max == null ? 10 : yAxis.max;
+    let ymin = yAxis.min == null ? 0 : yAxis.min;
+
+    // handling adaptive ranges
+    if (xAxis.adaptiveRange) {
+      for (const point of allPoints) {
+        if (point.x < xmin) {
+          xmin = point.x;
+        }
+        if (point.x > xmax) {
+          xmax = point.x;
+        }
+      }
+    }
+    if (yAxis.adaptiveRange) {
+      for (const point of props.points) {
+        if (point.y < ymin) {
+          ymin = point.y;
+        }
+        if (point.y > ymax) {
+          ymax = point.y;
+        }
+      }
+    }
+
+    // scaling props.points to canvas
+    const xTrans = width / (xmax - xmin);
+    const yTrans = height / (ymax - ymin);
+    const transX = x => x * xTrans - xmin * xTrans;
+    const transY = y => y * yTrans - ymin * yTrans;
+
+    // clear canvas
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, width, height);
+
+    // drawing axes
+    if (!xAxis.hidden) {
+      ctx.fillStyle = 'black';
+      const xMajor = xAxis.majorTicks || 10;
+      for (let x = xmin; x < xmax; x += xMajor) {
+        drawLine(ctx, {
+          x: transX(x),
+          y: height
+        }, {
+          x: transX(x),
+          y: height - 20
+        });
+      }
+      const xMinor = xAxis.minorTicks || 2;
+      for (let x = xmin; x < xmax; x += xMinor) {
+        drawLine(ctx, {
+          x: transX(x),
+          y: height
+        }, {
+          x: transX(x),
+          y: height - 10
+        });
+      }
+    }
+    if (!yAxis.hidden) {
+      const yMajor = yAxis.majorTicks || 10;
+      for (let y = ymin; y < ymax; y += yMajor) {
+        drawLine(ctx, {
+          x: 0,
+          y: transY(y)
+        }, {
+          x: 20,
+          y: transY(y)
+        });
+      }
+      const yMinor = yAxis.minorTicks || 2;
+      for (let y = ymin; y < ymax; y += yMinor) {
+        drawLine(ctx, {
+          x: 0,
+          y: transY(y)
+        }, {
+          x: 10,
+          y: transY(y)
+        });
+      }
+    }
+
+    // drawing props.points
+    const sortedPoints = [...props.points].sort((a, b) => a.x - b.x);
+    let prevPoint = null;
+    for (const point of sortedPoints) {
+      ctx.fillStyle = point.color ? point.color : 'black';
+      const x = transX(point.x);
+      const y = ymax * yTrans - ymin * yTrans - point.y * yTrans;
+      const size = 2;
+      if (!isLinear) {
+        ctx.fillRect(x - size, y - size, size * 2, size * 2);
+      }
+      if (isLinear && prevPoint != null) {
+        ctx.fillStyle = 'black';
+        drawLine(ctx, prevPoint, {
+          x,
+          y
+        });
+      }
+      prevPoint = {
+        x,
+        y
+      };
+    }
+  }, [props, resizeCount]);
+
+  // axis labels
+  let xAxisLabel = null;
+  let yAxisLabel = null;
+  if (props.xAxis.label != null) {
+    xAxisLabel = /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: 'center'
+      }
+    }, props.xAxis.label);
+  }
+  if (props.yAxis.label != null) {
+    yAxisLabel = /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'table-cell',
+        verticalAlign: 'middle'
+      }
+    }, props.yAxis.label);
+  }
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 'fit-content',
+      display: props.inline ? 'inline' : 'table'
+    }
+  }, yAxisLabel, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'inline-block'
+    }
+  }, /*#__PURE__*/React.createElement(Canvas, {
+    id: props.canvasID,
+    useFullScreen: props.useFullScreen,
+    width: props.width,
+    height: props.height
+  })), xAxisLabel);
+};
+const drawLine = (ctx, p1, p2) => {
+  ctx.beginPath();
+  ctx.moveTo(p1.x, p1.y);
+  ctx.lineTo(p2.x, p2.y);
+  ctx.stroke();
+  ctx.closePath();
+};
+const PlotWatcher = props => {
+  // track points with watching
+  const [pointState, dispatch] = useReducer((state, action) => {
+    if (action.type == 'SET_ALL') {
+      return {
+        points: [...action.points]
+      };
+    }
+    const {
+      value
+    } = action;
+    // don't add a point if we're changeOnly and value is the same
+    let prevVal = state.points.length > 0 ? state.points[state.points.length - 1].y : -1;
+    if (props.changeOnly && value == prevVal) {
+      return state;
+    }
+    const point = {
+      x: state.points.length,
+      y: value
+    };
+    if (point.x < props.xAxis.max) {
+      return {
+        ...state,
+        points: state.points ? [...state.points, point] : points
+      };
+    } else {
+      const [_, ...next] = state.points;
+      for (const p of next) {
+        p.x -= 1;
+      }
+      return {
+        ...state,
+        points: state.points ? [...next, point] : points
+      };
+    }
+  }, {
+    points: [...props.points]
+  });
+  useEffect(() => {
+    if (props.watch == null) {
+      dispatch({
+        type: 'SET_ALL',
+        points: props.points
+      });
+    } else {
+      dispatch({
+        type: 'SET',
+        value: props.watch
+      });
+    }
+  }, [props.watch, dispatch, props.points]);
+  return /*#__PURE__*/React.createElement(Plot, _extends({}, props, {
+    points: pointState.points
+  }));
+};
+module.exports = PlotWatcher;
+},{"./Button.react":47,"./Canvas.react":48,"react":87}],59:[function(require,module,exports){
+const React = require('react');
+const Button = require('./Button.react');
+const Modal = require('./Modal.react');
+const {
+  isElectron
+} = require('bens_utils').platform;
+const {
+  useState,
+  useEffect,
+  useMemo
+} = React;
+const QuitButton = props => {
+  const {
+    isInGame,
+    dispatch
+  } = props;
+  if (!isInGame && !isElectron()) return null;
+  const buttonStyle = isInGame ? {} : {
+    margin: 5,
+    borderRadius: 8,
+    left: 5
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    style: buttonStyle
+  }, /*#__PURE__*/React.createElement(Button, {
+    label: "Quit",
+    onClick: () => {
+      if (!isInGame) {
+        remote.webFrame.context.close();
+      } else {
+        quitGameModal(dispatch);
+      }
+    }
+  }));
+};
+const quitGameModal = dispatch => {
+  dispatch({
+    type: 'STOP_TICK'
+  });
+  const returnToMainMenuButton = {
+    label: 'Main Menu',
+    onClick: () => {
+      dispatch({
+        type: 'DISMISS_MODAL'
+      });
+      dispatch({
+        type: 'RETURN_TO_LOBBY'
+      });
+    }
+  };
+  const returnToGameButton = {
+    label: 'Return to Game',
+    onClick: () => {
+      dispatch({
+        type: 'DISMISS_MODAL'
+      });
+      dispatch({
+        type: 'START_TICK'
+      });
+    }
+  };
+  const quitAppButton = {
+    label: 'Quit Application',
+    onClick: () => {
+      remote.webFrame.context.close();
+    }
+  };
+  const buttons = [returnToGameButton, returnToMainMenuButton];
+  if (isElectron()) {
+    buttons.push(quitAppButton);
+  }
+  const body = /*#__PURE__*/React.createElement("div", null);
+  dispatch({
+    type: 'SET_MODAL',
+    modal: /*#__PURE__*/React.createElement(Modal, {
+      title: 'Quit Game?',
+      body: body,
+      buttons: buttons
+    })
+  });
+};
+module.exports = QuitButton;
+},{"./Button.react":47,"./Modal.react":56,"bens_utils":77,"react":87}],60:[function(require,module,exports){
+const React = require('react');
+
+// props:
+// options: Array<string>
+// selected: string
+// onChange: (option) => void
+// displayOptions: ?Array<string>
+// isInline: ?boolean,
+
+class RadioPicker extends React.Component {
+  render() {
+    const optionToggles = [];
+    for (let i = 0; i < this.props.options.length; i++) {
+      const option = this.props.options[i];
+      const displayOption = this.props.displayOptions && this.props.displayOptions[i] ? this.props.displayOptions[i] : option;
+      optionToggles.push( /*#__PURE__*/React.createElement("div", {
+        key: 'radioOption_' + option,
+        style: {
+          display: this.props.isInline ? 'inline' : 'block'
+        }
+      }, displayOption, /*#__PURE__*/React.createElement("input", {
+        type: "radio",
+        className: "radioCheckbox",
+        value: displayOption,
+        checked: option === this.props.selected,
+        onChange: () => this.props.onChange(option)
+      })));
+    }
+    return /*#__PURE__*/React.createElement("div", null, optionToggles);
+  }
+}
+module.exports = RadioPicker;
+},{"react":87}],61:[function(require,module,exports){
+const React = require('react');
+const NumberField = require('./NumberField.react');
+const {
+  useState,
+  useMemo,
+  useEffect
+} = React;
+
+/**
+ *  props:
+ *  min, max: number,
+ *  value: ?number (min if null),
+ *  onChange: (number) => void,
+ *  step: ?number (1 if null),
+ *  label: ?string,
+ *  isFloat: ?boolean,
+ *  noNumberField: ?boolean,
+ *  noOrignalValue: ?boolean,
+ *  inline: ?boolean,
+ *  style: ?Object,
+ *  disabled: ?boolean,
+ */
+function Slider(props) {
+  const {
+    isFloat
+  } = props;
+  const label = /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'inline-block'
+    }
+  }, props.label);
+  let value = props.value != null ? props.value : props.min;
+  value = isFloat ? Math.floor(value * 10) : value;
+  const displayValue = isFloat ? value / 10 : value;
+  const min = isFloat ? props.min * 10 : props.min;
+  const max = isFloat ? props.max * 10 : props.max;
+  const originalValue = useMemo(() => {
+    return displayValue;
+  }, []);
+  let step = props.step != null ? props.step : 1;
+  if (isFloat && step < 1) {
+    step *= 10; // step is 0.1 by default for isFloat
+  }
+
+  return /*#__PURE__*/React.createElement("div", {
+    style: props.style || {}
+  }, props.label != null ? label : null, /*#__PURE__*/React.createElement("input", {
+    type: "range",
+    id: 'slider_' + label,
+    min: min,
+    max: max,
+    disabled: props.disabled,
+    value: value,
+    onChange: ev => {
+      if (props.disabled) {
+        return;
+      }
+      const val = ev.target.value;
+      props.onChange(parseFloat(isFloat ? val / 10 : val));
+    },
+    step: step
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'inline-block'
+    }
+  }, props.noNumberField ? null : /*#__PURE__*/React.createElement(NumberField, {
+    disabled: props.disabled,
+    value: displayValue,
+    onlyInt: !isFloat,
+    onChange: val => {
+      props.onChange(val);
+    },
+    submitOnBlur: false
+  }), props.noOriginalValue ? null : "(" + originalValue + ")"));
+}
+module.exports = Slider;
+},{"./NumberField.react":57,"react":87}],62:[function(require,module,exports){
+const React = require('react');
+
+/**
+ *  Props:
+ *    - style: object, // additional styling for outer div
+ *    - width: px, height: px,
+ *    - src: string, // image source
+ *    - spriteSheet: {pxWidth, pxHeight, imagesAcross, imagesDown}, // width of a single image
+ *    - offset: {x, y}, // x and y positions inside the spritesheet indexed by image
+ *
+ */
+
+const SpriteSheet = props => {
+  const {
+    spriteSheet,
+    offset
+  } = props;
+  const {
+    pxWidth,
+    pxHeight,
+    imagesAcross,
+    imagesDown
+  } = spriteSheet;
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: props.width ?? '100%',
+      height: props.height ?? '100%',
+      overflow: 'hidden',
+      position: 'absolute',
+      ...(props.style ?? {})
+    }
+  }, /*#__PURE__*/React.createElement("img", {
+    src: props.src,
+    style: {
+      position: 'absolute',
+      width: pxWidth * imagesAcross,
+      height: pxHeight * imagesDown,
+      left: pxWidth * -1 * offset.x,
+      top: pxHeight * -1 * offset.y
+    }
+  }));
+};
+module.exports = SpriteSheet;
+},{"react":87}],63:[function(require,module,exports){
+function _extends() { _extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return _extends.apply(this, arguments); }
+const React = require('react');
+const {
+  subtract,
+  add
+} = require('bens_utils').vectors;
+const {
+  useMouseHandler,
+  useEnhancedReducer,
+  mouseReducer
+} = require('./hooks');
+const {
+  useEffect,
+  useState,
+  useMemo
+} = React;
+
+/**
+ * Required Props:
+ *  - id: id of draggable area
+ *  - options: Array<{label, onClick, style, isCircular, color}>
+ *  - onSelectIndex: (index, option, isCancel) => void,
+ *  - selectedIndex: index,
+ *  - width: pixels
+ *  - height: pixels
+ */
+const SwipePicker = props => {
+  const {
+    options,
+    style,
+    width,
+    height,
+    id,
+    minSize = 0.6,
+    maxSize = 0.9,
+    selectedStyle = {},
+    deselectedStyle = {},
+    onSelectIndex,
+    selectedIndex,
+    defaultColor = 'rgb(205,202,179)',
+    gap = 10,
+    onMouseDown,
+    onMouseMove
+  } = props;
+
+  // options can have dynamic widths so use these to get them on the fly
+  const getOptionWidth = index => {
+    const optionElem = document.getElementById(id + "_option_" + index);
+    if (!optionElem) return 0;
+    return optionElem.getBoundingClientRect().width;
+  };
+  const getWidthToOption = index => {
+    let widthToCurrentElement = 0;
+    for (let i = 0; i < index; i++) {
+      widthToCurrentElement += getOptionWidth(i) + gap;
+    }
+    return widthToCurrentElement + getOptionWidth(index) / 2;
+  };
+
+  // distances to left, right, center
+  const getOptionDistFromLeft = (index, left) => {
+    const widthToCurrentElement = getWidthToOption(index);
+    return widthToCurrentElement + left;
+  };
+  const getOptionDistFromRight = (index, left) => {
+    const widthToCurrentElement = getWidthToOption(index);
+    return Math.abs(widthToCurrentElement + left - width);
+  };
+  const getOptionDistFromCenter = (index, left) => {
+    const widthToCurrentElement = getWidthToOption(index);
+    return widthToCurrentElement + left - width / 2;
+  };
+
+  // get option relative to location
+  const getOptionAtCenter = (options, left) => {
+    let index = 0;
+    let distToCenter = Math.abs(getOptionDistFromCenter(0, left));
+    for (let i = 0; i < options.length; i++) {
+      let testDist = Math.abs(getOptionDistFromCenter(i, left));
+      if (testDist < distToCenter) {
+        distToCenter = testDist;
+        index = i;
+      }
+    }
+    return index;
+  };
+  const getOptionAtOffset = (options, offset) => {
+    const parentLeft = document.getElementById(id).getBoundingClientRect().x;
+    for (let i = 0; i < options.length; i++) {
+      const optionElem = document.getElementById(id + "_option_" + i);
+      const {
+        x,
+        width
+      } = optionElem.getBoundingClientRect();
+      const left = x - parentLeft;
+      if (left < offset && left + width > offset) {
+        return i;
+      }
+    }
+    return null;
+  };
+
+  // handle state of everything
+  const [state, dispatch, getState] = useEnhancedReducer((state, action) => ({
+    ...state,
+    mouse: mouseReducer(state.mouse, action)
+  }), {
+    mouse: {},
+    selectedIndex,
+    left: 0,
+    prevLeft: 0
+  });
+
+  // drag handling
+  useMouseHandler(id, {
+    dispatch,
+    getState
+  }, {
+    mouseMove: (state, dispatch, pixel) => {
+      if (!state.mouse.isLeftDown) return;
+      dispatch({
+        left: state.prevLeft + subtract(pixel, state.mouse.downPixel).x
+      });
+      if (onMouseMove) {
+        onMouseMove(pixel);
+      }
+    },
+    leftDown: (state, dispatch, pixel) => {
+      dispatch({
+        prevLeft: state.left
+      });
+      // check for onClick:
+      const indexAtPixel = getOptionAtOffset(options, pixel.x);
+      if (indexAtPixel != null && indexAtPixel == state.selectedIndex && options[indexAtPixel].onClick) {
+        options[indexAtPixel].onClick();
+      }
+      if (onMouseDown) {
+        onMouseDown(pixel);
+      }
+    },
+    leftUp: (state, dispatch, pixel) => {
+      const selectedIndex = getOptionAtCenter(options, state.left);
+      dispatch({
+        selectedIndex
+      });
+      if (onSelectIndex) {
+        onSelectIndex(selectedIndex, options[selectedIndex]);
+      }
+    },
+    mouseLeave: (state, dispatch) => {
+      if (!state.mouse.isLeftDown) return;
+      const selectedIndex = getOptionAtCenter(options, state.left);
+      dispatch({
+        type: 'SET_MOUSE_DOWN',
+        isLeft: true,
+        isDown: false
+      });
+      dispatch({
+        selectedIndex
+      });
+      if (onSelectIndex) {
+        onSelectIndex(selectedIndex, options[selectedIndex], true /* is cancel */);
+      }
+    }
+  }, [options], 12 // throttle rate for mouse move
+  );
+
+  // listening for selected element changing from outside
+  useEffect(() => {
+    dispatch({
+      selectedIndex
+    });
+  }, [selectedIndex]);
+
+  // centering selected element
+  useEffect(() => {
+    const widthToSelectedElement = getWidthToOption(state.selectedIndex);
+    dispatch({
+      left: width / 2 - widthToSelectedElement
+    });
+  }, [state.selectedIndex, !state.mouse.isLeftDown]);
+  return /*#__PURE__*/React.createElement("div", {
+    id: id,
+    style: {
+      position: 'relative',
+      width,
+      height,
+      overflow: 'hidden',
+      ...style
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap,
+      overflowX: 'hidden',
+      position: 'absolute',
+      left: state.left,
+      transition: 'left ' + (state.mouse.isLeftDown ? '0s' : '0.25s'),
+      top: 0,
+      pointerEvents: 'none'
+    }
+  }, options.map((o, i) => /*#__PURE__*/React.createElement(PickerOption, _extends({
+    key: id + "_option_" + o.label + "_" + i
+  }, o, {
+    width: width,
+    height: height,
+    color: o.color ?? defaultColor,
+    style: {
+      ...o.style,
+      ...(i == state.selectedIndex ? selectedStyle : deselectedStyle),
+      background: getOptionDistFromLeft(i, state.left) < getOptionWidth(i) ? `linear-gradient(to right, transparent 0%, ${o.color ?? defaultColor} ${300 - getOptionDistFromLeft(i, state.left) / getOptionWidth(i) * 300}%)` : getOptionDistFromRight(i, state.left) < getOptionWidth(i) ? `linear-gradient(to left, transparent 0%, ${o.color ?? defaultColor} ${300 - getOptionDistFromRight(i, state.left) / getOptionWidth(i) * 300}%)` : o.color ?? defaultColor // NO-OP
+    },
+
+    isSelected: i == state.selectedIndex,
+    sizeMult: !state.mouse.isLeftDown ? i == state.selectedIndex ? maxSize : minSize : Math.max(maxSize - Math.abs(getOptionDistFromCenter(i, state.left)) / (width / 2), minSize),
+    id: id + "_option_" + i
+  })))));
+};
+
+/**
+ * Props:
+ *  - isSelected: boolean
+ *  - onClick: () => void
+ *  - style: style overrides for outermost component
+ */
+const PickerOption = props => {
+  const {
+    style,
+    isSelected,
+    onClick,
+    label,
+    width: parentWidth,
+    height: parentHeight,
+    isCircular,
+    id,
+    sizeMult,
+    color: backgroundColor
+  } = props;
+  return /*#__PURE__*/React.createElement("div", {
+    id: id,
+    style: {
+      backgroundColor,
+      borderRadius: isCircular ? '50%' : 5,
+      // transition: 'background 0.5s',
+
+      height: sizeMult * parentHeight,
+      width: isCircular ? sizeMult * parentHeight : 'auto',
+      padding: isCircular ? 0 : '0 ' + parentHeight * 0.2,
+      textAlign: 'center',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+      pointerEvents: 'none',
+      userSelect: 'none',
+      ...style
+    }
+    // onClick={onClick}
+  }, label);
+};
+module.exports = SwipePicker;
+},{"./hooks":67,"bens_utils":77,"react":87}],64:[function(require,module,exports){
+const React = require('react');
+const Button = require('./Button.react');
+const Dropdown = require('./Dropdown.react');
+const {
+  useEffect,
+  useMemo,
+  useState
+} = React;
+
+/**
+type ColumnName = string;
+type Props = {
+  columns: {[name: ColumnName]: {
+    displayName: string,
+    sortFn: ?() => number, // sorts alphanumerically if not provided
+    maxWidth: number, // maximum number of characters allowed
+    filterable: ?boolean, // if true, then have a dropdown with all unique
+                          // options and filter rows by these
+  }},
+  rows: Array<{[name: ColumnName]: mixed}>,
+  hideColSorts: boolean,
+  hideNumRows: boolean,
+  style: Object containing additional styles for outer div
+};
+*/
+
+const tableStyle = {
+  backgroundColor: '#faf8ef',
+  width: '100%',
+  borderRadius: 8
+};
+function Table(props) {
+  const {
+    columns,
+    rows,
+    hideColSorts
+  } = props;
+  let colNames = [];
+  if (props.columns) {
+    colNames = Object.keys(columns);
+  } else {
+    // TODO: infer column names if not provided
+  }
+
+  // sort by column
+  const [sortByColumn, setSortByColumn] = useState({
+    by: 'ASC',
+    name: null
+  });
+  useEffect(() => {
+    if (!colNames.includes(sortByColumn.name)) {
+      setSortByColumn({
+        by: 'ASC',
+        name: null
+      });
+    }
+  }, [columns]);
+
+  // filter by column
+  const computeSelectedByColumn = colNames => {
+    const selected = {};
+    for (const col of colNames) {
+      if (columns[col].filterable) {
+        selected[col] = '*';
+      }
+    }
+    return selected;
+  };
+  const [selectedByColumn, setSelectedByColumn] = useState(computeSelectedByColumn(colNames));
+  useEffect(() => {
+    const selected = {};
+    for (const col of colNames) {
+      if (columns[col].filterable) {
+        selected[col] = selectedByColumn[col] || '*';
+      }
+    }
+    setSelectedByColumn(selected);
+  }, [columns]);
+  const columnOptions = useMemo(() => {
+    const filters = {};
+    for (const col of colNames) {
+      if (columns[col].filterable) {
+        filters[col] = ['*'];
+        for (const row of rows) {
+          if (!filters[col].includes(row[col])) {
+            filters[col].push(row[col]);
+          }
+        }
+      }
+    }
+    return filters;
+  }, [columns]);
+  const headers = colNames.map(col => {
+    let filterDropdown = null;
+    if (columns[col].filterable) {
+      filterDropdown = /*#__PURE__*/React.createElement(Dropdown, {
+        options: columnOptions[col],
+        selected: selectedByColumn[col] ? selectedByColumn[col].selected : '*',
+        onChange: n => {
+          setSelectedByColumn({
+            ...selectedByColumn,
+            [col]: n
+          });
+        }
+      });
+    }
+    return /*#__PURE__*/React.createElement("th", {
+      key: 'header_' + col
+    }, columns[col].displayName || col, hideColSorts ? null : /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontWeight: 'normal'
+      }
+    }, "Sort:", /*#__PURE__*/React.createElement(Button, {
+      label: "/\\",
+      fontSize: 12,
+      onClick: () => {
+        setSortByColumn({
+          by: 'ASC',
+          name: col
+        });
+      }
+    }), /*#__PURE__*/React.createElement(Button, {
+      label: "\\/",
+      fontSize: 12,
+      onClick: () => {
+        setSortByColumn({
+          by: 'DESC',
+          name: col
+        });
+      }
+    }), filterDropdown));
+  });
+  const filteredRows = useMemo(() => {
+    const filtered = [];
+    for (const row of rows) {
+      let addRow = true;
+      for (const col in selectedByColumn) {
+        if (row[col] != selectedByColumn[col] && selectedByColumn[col] != '*') {
+          addRow = false;
+          break;
+        }
+      }
+      if (addRow) {
+        filtered.push(row);
+      }
+    }
+    return filtered;
+  }, [rows, selectedByColumn, columnOptions]);
+  const sortedRows = useMemo(() => {
+    if (sortByColumn.name == null) return filteredRows;
+    if (columns[sortByColumn.name] == null) return filteredRows;
+    let sorted = [];
+    if (columns[sortByColumn.name].sortFn != null) {
+      sorted = [...filteredRows].sort(columns[sortByColumn.name].sortFn);
+    } else {
+      sorted = [...filteredRows].sort((rowA, rowB) => {
+        if (rowA[sortByColumn.name] < rowB[sortByColumn.name]) {
+          return -1;
+        }
+        return 1;
+      });
+    }
+    if (sortByColumn.by != 'ASC') {
+      return sorted.reverse();
+    }
+    return sorted;
+  }, [sortByColumn, filteredRows]);
+  const rowHTML = sortedRows.map((row, i) => {
+    const rowData = colNames.map(col => {
+      const dataCell = columns[col].maxWidth ? ("" + row[col]).slice(0, columns[col].maxWidth) : row[col];
+      return /*#__PURE__*/React.createElement("td", {
+        key: 'cell_' + col + row[col]
+      }, dataCell);
+    });
+    return /*#__PURE__*/React.createElement("tr", {
+      key: 'row_' + i
+    }, rowData);
+  });
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      ...tableStyle,
+      ...props.style
+    }
+  }, props.hideNumRows ? null : /*#__PURE__*/React.createElement("span", null, "Total Rows: ", rows.length, " Rows Displayed: ", filteredRows.length), /*#__PURE__*/React.createElement("table", null, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, headers)), /*#__PURE__*/React.createElement("tbody", null, rowHTML)));
+}
+module.exports = Table;
+},{"./Button.react":47,"./Dropdown.react":53,"react":87}],65:[function(require,module,exports){
+const React = require('react');
+
+/**
+ * Props:
+ *  - value: str,
+ *  - placeholder: ?str
+ *  - rows: number
+ *  - cols: ?number
+ *  - onChange: (str) => void
+ *  - style: Object
+ *
+ *  NOTE:
+ *    in the style use resize: none to prevent it from being resizeable
+ */
+const TextArea = props => {
+  const {
+    value,
+    placeholder,
+    id,
+    onChange,
+    onBlur,
+    onFocus,
+    className,
+    rows,
+    cols
+  } = props;
+  const style = props.style != null ? props.style : {};
+  return /*#__PURE__*/React.createElement("textarea", {
+    id: id ? id : null,
+    className: className ? className : null,
+    style: style,
+    placeholder: placeholder,
+    onChange: ev => {
+      if (props.onChange) onChange(ev.target.value);
+    },
+    onBlur: ev => {
+      if (props.onBlur) onBlur(ev.target.value);
+    },
+    onFocus: ev => {
+      if (props.onFocus) onFocus(ev.target.value);
+    },
+    rows: rows,
+    cols: cols,
+    value: value
+  });
+};
+module.exports = TextArea;
+},{"react":87}],66:[function(require,module,exports){
+const React = require('react');
+
+/**
+ * Props:
+ *  - value: str,
+ *  - placeholder: ?str
+ *  - password: ?boolean
+ *  - onChange: (str) => void
+ *  - style: Object
+ */
+const TextField = props => {
+  const {
+    value,
+    placeholder,
+    password,
+    id,
+    onChange,
+    onBlur,
+    onFocus,
+    className
+  } = props;
+  const style = props.style != null ? props.style : {};
+  return /*#__PURE__*/React.createElement("input", {
+    id: id ? id : null,
+    className: className ? className : null,
+    style: style,
+    placeholder: placeholder,
+    type: password ? 'password' : 'text',
+    value: value,
+    onChange: ev => {
+      if (props.onChange) onChange(ev.target.value);
+    },
+    onBlur: ev => {
+      if (props.onBlur) onBlur(ev.target.value);
+    },
+    onFocus: ev => {
+      if (props.onFocus) onFocus(ev.target.value);
+    }
+  });
+};
+module.exports = TextField;
+},{"react":87}],67:[function(require,module,exports){
+const React = require('react');
+const {
+  throttle
+} = require('bens_utils').helpers;
+const {
+  useEffect,
+  useState,
+  useMemo,
+  useReducer,
+  useRef,
+  useCallback
+} = React;
+
+// --------------------------------------------------------------------
+// UseEnhancedReducer
+// --------------------------------------------------------------------
+// use like
+// const [state, dispatch, getState] = useEnhancedReducer(reducer, initialState);
+// ALSO
+// can dispatch an action with no type and the action is simply merged into the state
+// with no need for handling
+const useEnhancedReducer = (reducer, initState, initializer) => {
+  const lastState = useRef(initState);
+  const getState = useCallback(() => lastState.current, []);
+  return [...useReducer((state, action) => {
+    const mergeReducer = (state, action) => {
+      if (action.type === undefined) {
+        return {
+          ...state,
+          ...action
+        };
+      }
+      return reducer(state, action);
+    };
+    return lastState.current = mergeReducer(state, action);
+  }, initState, initializer), getState];
+};
+
+// --------------------------------------------------------------------
+// UseResponsiveDimensions
+// --------------------------------------------------------------------
+// use like
+// const [width, height] = useResponsiveDimensions((width, height) => doStuff);
+const useResponsiveDimensions = onResize => {
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [windowHeight, setWindowHeight] = useState(window.innerHeight);
+  useEffect(() => {
+    function handleResize() {
+      setWindowWidth(window.innerWidth);
+      setWindowHeight(window.innerHeight);
+    }
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [onResize]);
+  useEffect(() => {
+    if (onResize) {
+      onResize(windowWidth, windowHeight);
+    }
+  }, [windowWidth, windowHeight]);
+  return [windowWidth, windowHeight];
+};
+
+// --------------------------------------------------------------------
+// UseHotkeyHandler
+// --------------------------------------------------------------------
+
+// NOTE:
+// type PseudoStore = {dispatch: (action) => void, getState: () => HotKeys}
+// Use Like:
+// const [hotKeys, hotKeyDispatch, getHotKeyState] = useEnhancedReducer(hotKeyReducer);
+// useHotKeyHandler({dispatch: hotKeyDispatch, getState: getHotKeyState});
+// useEffect(() => {
+//    hotKeyDispatch({type: 'SET_HOTKEY', key: 'space', press: 'onKeyDown', fn: (state, dispatch) => {
+//      doSomething();
+//    }});
+// }, []);
+// NOTE: key must be capitalized! space, enter, left,right,up,down also allowed
+const useHotKeyHandler = (pseudoStore, noWASD, dependencies) => {
+  useEffect(() => {
+    const {
+      dispatch,
+      getState
+    } = pseudoStore;
+    const keyFn = (ev, keyEventType, pressed) => {
+      const state = getState();
+      const dir = getUpDownLeftRight(ev, noWASD);
+      if (dir != null) {
+        if (state && state[keyEventType][dir] != null) {
+          state[keyEventType][dir](getState(), dispatch);
+        }
+        dispatch({
+          type: 'SET_KEY_PRESS',
+          key: dir,
+          pressed
+        });
+        return;
+      }
+      if (ev.keyCode === 13) {
+        if (state && state[keyEventType].enter != null) {
+          state[keyEventType].enter(getState(), dispatch);
+        }
+        dispatch({
+          type: 'SET_KEY_PRESS',
+          key: 'enter',
+          pressed
+        });
+        return;
+      }
+      if (ev.keyCode === 32) {
+        if (state && state[keyEventType].space != null) {
+          state[keyEventType].space(getState(), dispatch);
+        }
+        dispatch({
+          type: 'SET_KEY_PRESS',
+          key: 'space',
+          pressed
+        });
+        return;
+      }
+      const character = String.fromCharCode(ev.keyCode).toUpperCase();
+      if (character != null) {
+        if (state && state[keyEventType][character] != null) {
+          state[keyEventType][character](getState(), dispatch);
+        }
+        dispatch({
+          type: 'SET_KEY_PRESS',
+          key: character,
+          pressed
+        });
+      }
+    };
+
+    // keypress event handling
+    document.onkeydown = ev => {
+      keyFn(ev, "onKeyDown", true);
+    };
+    document.onkeypress = ev => {
+      keyFn(ev, "onKeyPress", true);
+    };
+    document.onkeyup = ev => {
+      keyFn(ev, "onKeyUp", false);
+    };
+  }, dependencies ?? []);
+};
+const hotKeyReducer = (hotKeys, action) => {
+  if (hotKeys === undefined) {
+    hotKeys = {
+      onKeyDown: {},
+      onKeyPress: {},
+      onKeyUp: {},
+      keysDown: {}
+    };
+  }
+  switch (action.type) {
+    case 'SET_KEY_PRESS':
+      {
+        const {
+          key,
+          pressed,
+          once
+        } = action;
+        hotKeys.keysDown[key] = pressed;
+        if (once == true) {
+          hotKeys.once = true;
+        }
+        return hotKeys;
+      }
+    case 'SET_HOTKEY':
+      {
+        const {
+          key,
+          press,
+          fn
+        } = action;
+        hotKeys[press][key] = fn;
+        return hotKeys;
+      }
+  }
+  return hotKeys;
+};
+const getUpDownLeftRight = (ev, noWASD) => {
+  const keyCode = ev.keyCode;
+  if (noWASD) {
+    if (keyCode === 38) {
+      return 'down';
+    }
+    if (keyCode === 40) {
+      return 'up';
+    }
+    if (keyCode === 37) {
+      return 'left';
+    }
+    if (keyCode === 39) {
+      return 'right';
+    }
+    return null;
+  }
+  if (keyCode === 87 || keyCode === 38 || keyCode === 119) {
+    return 'down';
+  }
+  if (keyCode === 83 || keyCode === 40 || keyCode === 115) {
+    return 'up';
+  }
+  if (keyCode === 65 || keyCode === 37 || keyCode === 97) {
+    return 'left';
+  }
+  if (keyCode === 68 || keyCode === 39 || keyCode === 100) {
+    return 'right';
+  }
+  return null;
+};
+
+// --------------------------------------------------------------------
+// UseMouseHandler
+// --------------------------------------------------------------------
+// NOTE:
+// type PseudoStore = {dispatch: (action) => void, getState: () => State}
+// type Handlers = {
+//  mouseMove,
+//  leftDown, leftUp,
+//  rightDown, rightUp,
+//  scroll,
+// };
+const useMouseHandler = (elementID, pseudoStore, handlers, dependencies, moveThrottle) => {
+  useEffect(() => {
+    const mvFn = throttle(onMove, [elementID, pseudoStore, handlers], moveThrottle ?? 12);
+    const touchMvFn = ev => {
+      // if (ev.target.id != elementID) ev.preventDefault();
+      onMove(elementID, pseudoStore, handlers, ev);
+    };
+    const mouseDownFn = ev => {
+      onMouseDown(elementID, pseudoStore, handlers, ev);
+    };
+    const mouseUpFn = ev => {
+      onMouseUp(elementID, pseudoStore, handlers, ev);
+    };
+    const mouseLeaveFn = ev => {
+      onMouseLeave(elementID, pseudoStore, handlers, ev);
+    };
+    let scrollLocked = false;
+    const scrollFn = ev => {
+      if (!scrollLocked) {
+        onScroll(elementID, pseudoStore, handlers, ev);
+        scrollLocked = true;
+        setTimeout(() => {
+          scrollLocked = false;
+        }, 150);
+      }
+    };
+    if (handlers.scroll) {
+      window.addEventListener("scroll", scrollFn);
+    }
+    if (handlers.mouseMove) {
+      window.addEventListener("mousemove", mvFn);
+      window.addEventListener("touchmove", touchMvFn);
+    }
+    window.addEventListener("mousedown", mouseDownFn);
+    window.addEventListener("mouseup", mouseUpFn);
+    window.addEventListener("touchstart", mouseDownFn);
+    window.addEventListener("touchend", mouseUpFn);
+    window.addEventListener("touchcancel", mouseUpFn);
+    window.addEventListener("mouseout", mouseLeaveFn);
+    return () => {
+      window.removeEventListener("scroll", scrollFn);
+      window.removeEventListener("mousemove", mvFn);
+      window.removeEventListener("touchmove", touchMvFn);
+      window.removeEventListener("mousedown", mouseDownFn);
+      window.removeEventListener("mouseup", mouseUpFn);
+      window.removeEventListener("touchstart", mouseDownFn);
+      window.removeEventListener("touchend", mouseUpFn);
+      window.removeEventListener("touchcancel", mouseUpFn);
+      window.removeEventListener("mouseleave", mouseLeaveFn);
+    };
+  }, dependencies ?? []);
+};
+const getMousePixel = (elementID, ev) => {
+  if (ev.target.id != elementID) return null;
+  const elem = document.getElementById(elementID);
+  if (!elem) return null;
+  const rect = elem.getBoundingClientRect();
+  let x = ev.clientX;
+  let y = ev.clientY;
+  if (ev.type === 'touchstart' || ev.type === 'touchmove') {
+    const touch = ev.touches[0];
+    x = touch.clientX;
+    y = touch.clientY;
+  }
+  if (ev.type == 'touchend') {
+    const touch = ev.changedTouches[0];
+    x = touch.clientX;
+    y = touch.clientY;
+  }
+  const elemPos = {
+    x: x - rect.left,
+    y: y - rect.top
+  };
+  return elemPos;
+};
+const onScroll = (elementID, pseudoStore, handlers, ev) => {
+  if (ev.target.id != elementID) return null;
+  const {
+    getState,
+    dispatch
+  } = pseudoStore;
+  handlers.scroll(getState(), dispatch, ev.wheelDelta < 0 ? 1 : -1);
+};
+const onMouseLeave = (elementID, pseudoStore, handlers, ev) => {
+  if (ev.target.id != elementID) return null;
+  const {
+    getState,
+    dispatch
+  } = pseudoStore;
+  if (handlers.mouseLeave) {
+    handlers.mouseLeave(getState(), dispatch);
+  }
+};
+const onMove = (elementID, pseudoStore, handlers, ev) => {
+  const {
+    getState,
+    dispatch
+  } = pseudoStore;
+  const pos = getMousePixel(elementID, ev);
+  if (!pos) return;
+  dispatch({
+    type: 'SET_MOUSE_POS',
+    curPixel: pos
+  });
+  if (handlers.mouseMove != null) {
+    handlers.mouseMove(getState(), dispatch, pos);
+  }
+};
+const onMouseDown = (elementID, pseudoStore, handlers, ev) => {
+  const elem = document.getElementById(elementID);
+  // don't open the normal right-click menu
+  if (elem != null) {
+    elem.addEventListener('contextmenu', ev => ev.preventDefault());
+  }
+  const {
+    getState,
+    dispatch
+  } = pseudoStore;
+  const pos = getMousePixel(elementID, ev);
+  if (!pos) return;
+  if (ev.button == 0 || ev.type == 'touchstart') {
+    // left click
+    dispatch({
+      type: 'SET_MOUSE_DOWN',
+      isLeft: true,
+      isDown: true,
+      downPixel: pos
+    });
+    if (handlers.leftDown != null) {
+      handlers.leftDown(getState(), dispatch, pos);
+    }
+  }
+  if (ev.button == 2) {
+    // right click
+    dispatch({
+      type: 'SET_MOUSE_DOWN',
+      isLeft: false,
+      isDown: true,
+      downPixel: pos
+    });
+    if (handlers.rightDown != null) {
+      handlers.rightDown(getState(), dispatch, pos);
+    }
+  }
+};
+const onMouseUp = (elementID, pseudoStore, handlers, ev) => {
+  const {
+    getState,
+    dispatch
+  } = pseudoStore;
+  const pos = getMousePixel(elementID, ev);
+  if (!pos) return;
+  if (ev.button == 0 || ev.type == 'touchend' || ev.type == 'touchcancel') {
+    // left click
+    dispatch({
+      type: 'SET_MOUSE_DOWN',
+      isLeft: true,
+      isDown: false
+    });
+    if (handlers.leftUp != null) {
+      handlers.leftUp(getState(), dispatch, pos);
+    }
+  }
+  if (ev.button == 2) {
+    // right click
+    dispatch({
+      type: 'SET_MOUSE_DOWN',
+      isLeft: false,
+      isDown: false
+    });
+    if (handlers.rightUp != null) {
+      handlers.rightUp(getState(), dispatch, pos);
+    }
+  }
+};
+const mouseReducer = (mouse, action) => {
+  if (mouse == undefined) {
+    mouse = {
+      isLeftDown: false,
+      isRightDown: false,
+      downPixel: {
+        x: 0,
+        y: 0
+      },
+      prevPixel: {
+        x: 0,
+        y: 0
+      },
+      curPixel: {
+        x: 0,
+        y: 0
+      },
+      prevInteractPos: null
+    };
+  }
+  switch (action.type) {
+    case 'SET_MOUSE_DOWN':
+      {
+        const {
+          isLeft,
+          isDown,
+          downPixel
+        } = action;
+        return {
+          ...mouse,
+          isLeftDown: isLeft ? isDown : mouse.isLeftDown,
+          isRightDown: isLeft ? mouse.isRightDown : isDown,
+          downPixel: isDown && downPixel != null ? downPixel : mouse.downPixel
+        };
+      }
+    case 'SET_MOUSE_POS':
+      {
+        const {
+          curPixel
+        } = action;
+        return {
+          ...mouse,
+          prevPixel: {
+            ...mouse.curPixel
+          },
+          curPixel
+        };
+      }
+  }
+  return mouse;
+};
+
+// --------------------------------------------------------------------
+// UseEnhanced Effect (experimental)
+// --------------------------------------------------------------------
+// pass accessibleVals that the effect can read but won't re-run when they change
+const useEnhancedEffect = (effectFn, dependencies, accessibleVals) => {
+  const compares = dependencies.map(useCompare);
+  useEffect(() => {
+    if (compares.filter(c => c).length == 0) return;
+    effectFn();
+  }, [...dependencies, ...accessibleVals, ...compares]);
+};
+
+// Desired hook
+function useCompare(val) {
+  const prevVal = usePrevious(val);
+  return prevVal !== val;
+}
+
+// Helper hook
+function usePrevious(value) {
+  const ref = useRef();
+  useEffect(() => {
+    ref.current = value;
+  }, [value]);
+  return ref.current;
+}
+module.exports = {
+  useEnhancedReducer,
+  useMouseHandler,
+  mouseReducer,
+  useHotKeyHandler,
+  hotKeyReducer,
+  useResponsiveDimensions,
+  useEnhancedEffect,
+  useCompare,
+  usePrevious
+};
+},{"bens_utils":77,"react":87}],68:[function(require,module,exports){
+// type Point = {
+//   x: number,
+//   y: number,
+//   color: ?string, // css color
+// };
+//
+// type Axis = {
+//   dimension: 'x' | 'y',
+//   label: string,
+//   min: ?number,
+//   max: ?number,
+// };
+
+const plotReducer = (state, action) => {
+  switch (action.type) {
+    case 'SET_AXIS':
+      const {
+        axis
+      } = action;
+      const whichAxis = axis.dimension == 'x' ? 'xAxis' : 'yAxis';
+      return {
+        ...state,
+        [whichAxis]: {
+          label: axis.dimension,
+          min: 0,
+          max: 100,
+          ...axis
+        }
+      };
+    case 'SET_POINTS':
+      const {
+        points
+      } = action;
+      return {
+        ...state,
+        points
+      };
+    case 'ADD_POINTS':
+      {
+        const {
+          points
+        } = action;
+        return {
+          ...state,
+          points: state.points ? [...state.points, ...points] : points
+        };
+      }
+    case 'ADD_POINT_CIRCULAR':
+      {
+        const {
+          point
+        } = action;
+        if (point.x < state.xAxis.max) {
+          return {
+            ...state,
+            points: state.points ? [...state.points, point] : points
+          };
+        } else {
+          const [_, ...next] = state.points;
+          return {
+            ...state,
+            points: state.points ? [...next, point] : points
+          };
+        }
+      }
+    case 'CLEAR_POINTS':
+      {
+        return {
+          ...state,
+          points: []
+        };
+      }
+    case 'PRINT_POINTS':
+      {
+        for (const point of state.points) {
+          console.log(point.x + "," + point.y);
+        }
+        return state;
+      }
+  }
+};
+module.exports = {
+  plotReducer
+};
+},{}],69:[function(require,module,exports){
+
+// const React = require('react');
+// const ReactDOM = require('react-dom');
+// const {useState, useEffect, useMemo, useReducer} = react;
+
+// const {
+module.exports = {
+  AudioWidget: require('./bin/AudioWidget.react.js'),
+  Board: require('./bin/Board.react.js'),
+  Button: require('./bin/Button.react.js'),
+  Canvas: require('./bin/Canvas.react.js'),
+  Checkbox: require('./bin/Checkbox.react.js'),
+  CheckerBackground: require('./bin/CheckerBackground.react.js'),
+  Divider: require('./bin/Divider.react.js'),
+  DragArea: require('./bin/DragAreaDeprecated.react.js'),
+  Dropdown: require('./bin/Dropdown.react.js'),
+  Indicator: require('./bin/Indicator.react.js'),
+  InfoCard: require('./bin/InfoCard.react.js'),
+  Modal: require('./bin/Modal.react.js'),
+  NumberField: require('./bin/NumberField.react.js'),
+  Plot: require('./bin/Plot.react.js'),
+  plotReducer: require('./bin/plotReducer.js').plotReducer,
+  QuitButton: require('./bin/QuitButton.react.js'),
+  RadioPicker: require('./bin/RadioPicker.react.js'),
+  Slider: require('./bin/Slider.react.js'),
+  SpriteSheet: require('./bin/SpriteSheet.react.js'),
+  SwipePicker: require('./bin/SwipePicker.react.js'),
+  Table: require('./bin/Table.react.js'),
+  TextField: require('./bin/TextField.react.js'),
+  TextArea: require('./bin/TextArea.react.js'),
+  ...require('./bin/hooks.js'),
+};
+
+
+
+},{"./bin/AudioWidget.react.js":45,"./bin/Board.react.js":46,"./bin/Button.react.js":47,"./bin/Canvas.react.js":48,"./bin/Checkbox.react.js":49,"./bin/CheckerBackground.react.js":50,"./bin/Divider.react.js":51,"./bin/DragAreaDeprecated.react.js":52,"./bin/Dropdown.react.js":53,"./bin/Indicator.react.js":54,"./bin/InfoCard.react.js":55,"./bin/Modal.react.js":56,"./bin/NumberField.react.js":57,"./bin/Plot.react.js":58,"./bin/QuitButton.react.js":59,"./bin/RadioPicker.react.js":60,"./bin/Slider.react.js":61,"./bin/SpriteSheet.react.js":62,"./bin/SwipePicker.react.js":63,"./bin/Table.react.js":64,"./bin/TextArea.react.js":65,"./bin/TextField.react.js":66,"./bin/hooks.js":67,"./bin/plotReducer.js":68}],70:[function(require,module,exports){
+'use strict';
+
+function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+
+var _require = require('./helpers'),
+    thetaToDir = _require.thetaToDir;
+
+var _require2 = require('./math'),
+    clamp = _require2.clamp;
+
+var _require3 = require('./vectors'),
+    add = _require3.add,
+    multiply = _require3.multiply,
+    subtract = _require3.subtract,
+    equals = _require3.equals,
+    floor = _require3.floor,
+    containsVector = _require3.containsVector;
+
+var initGrid = function initGrid(gridWidth, gridHeight, numPlayers) {
+  var grid = [];
+  for (var x = 0; x < gridWidth; x++) {
+    var col = [];
+    for (var y = 0; y < gridHeight; y++) {
+      var cell = {
+        entities: []
+      };
+      for (var i = 0; i < numPlayers; i++) {
+        cell[i + 1] = {};
+        // pheromones:
+        // for (const pheromoneType of config.pheromoneTypes) {
+        //   cell[i+1][pheromoneType] = 0;
+        // }
+      }
+      col.push(cell);
+    }
+    grid.push(col);
+  }
+  return grid;
+};
+
+var insideGrid = function insideGrid(grid, position) {
+  if (position == null) return false;
+  var x = position.x,
+      y = position.y;
+
+  return grid[x] != null && x >= 0 && y >= 0 && x < grid.length && y < grid[x].length;
+};
+var entityInsideGrid = function entityInsideGrid(game, entity) {
+  var gridWidth = game.gridWidth,
+      gridHeight = game.gridHeight;
+  var position = entity.position,
+      width = entity.width,
+      height = entity.height;
+
+  if (position == null) return false;
+  var x = position.x,
+      y = position.y;
+
+
+  return x >= 0 && y >= 0 && x + width <= gridWidth && y + height <= gridHeight;
+};
+
+var lookupInGrid = function lookupInGrid(grid, position) {
+  if (!insideGrid(grid, position)) return [];
+  return grid[position.x][position.y].entities;
+};
+
+var getPheromonesInCell = function getPheromonesInCell(grid, position, playerID) {
+  if (!insideGrid(grid, position)) return [];
+  return grid[position.x][position.y][playerID];
+};
+
+var insertInCell = function insertInCell(grid, position, entityID) {
+  if (!insideGrid(grid, position)) return false;
+
+  grid[position.x][position.y].entities.push(entityID);
+  return true;
+};
+
+var deleteFromCell = function deleteFromCell(grid, position, entityID) {
+  if (!insideGrid(grid, position)) return true;
+
+  var x = position.x,
+      y = position.y;
+
+  var oldLength = grid[x][y].entities.length;
+  grid[x][y].entities = grid[x][y].entities.filter(function (id) {
+    return id != entityID;
+  });
+
+  return oldLength != grid[x][y].entities.length;
+};
+
+var canvasToGrid = function canvasToGrid(game, canvasPos, canvasSize) {
+  var canvasWidth = canvasSize.width,
+      canvasHeight = canvasSize.height;
+  var viewPos = game.viewPos,
+      viewWidth = game.viewWidth,
+      viewHeight = game.viewHeight;
+
+  // HACK: this is copypasta from the render/render.js function for maxMinimap
+
+  if (game.maxMinimap) {
+    var nextViewPos = {
+      x: game.viewPos.x - game.viewWidth * 3 / 2,
+      y: game.viewPos.y - game.viewHeight * 3 / 2
+    };
+    viewWidth *= 3;
+    viewHeight *= 3;
+    viewPos = {
+      x: clamp(nextViewPos.x, 0, game.gridWidth - game.viewWidth * 3),
+      y: clamp(nextViewPos.y, 0, game.gridHeight - game.viewHeight * 3)
+    };
+    if (viewWidth > game.gridWidth) {
+      viewPos.x = game.gridWidth / 2 - viewWidth / 2;
+    }
+    if (viewHeight > game.gridHeight) {
+      viewPos.y = game.gridHeight / 2 - viewHeight / 2;
+    }
+  }
+
+  var scaleVec = {
+    x: viewWidth / canvasWidth,
+    y: viewHeight / canvasHeight
+  };
+
+  var gridCoord = floor(add({ x: viewPos.x, y: viewPos.y }, multiply(canvasPos, scaleVec)));
+  return floor(gridCoord);
+};
+
+var getEntityPositions = function getEntityPositions(game, entity) {
+  if (entity.segmented) {
+    return [entity.position].concat(_toConsumableArray(entity.segments.map(function (s) {
+      return s.position;
+    })));
+  }
+  var width = entity.width != null ? entity.width : 1;
+  var height = entity.height != null ? entity.height : 1;
+  var dir = thetaToDir(entity.theta);
+  var positions = [];
+  for (var x = 0; x < entity.width; x++) {
+    for (var y = 0; y < entity.height; y++) {
+      var pos = { x: x, y: y };
+      if (dir == 'left' || dir == 'right') {
+        pos = { x: y, y: x };
+      }
+      positions.push(add(entity.position, pos));
+    }
+  }
+  return positions;
+};
+
+module.exports = {
+  initGrid: initGrid, // TODO: move gridHelpers out of utils/
+  insideGrid: insideGrid,
+  lookupInGrid: lookupInGrid,
+  insertInCell: insertInCell,
+  deleteFromCell: deleteFromCell,
+  getPheromonesInCell: getPheromonesInCell,
+  canvasToGrid: canvasToGrid,
+  getEntityPositions: getEntityPositions,
+  entityInsideGrid: entityInsideGrid
+};
+},{"./helpers":71,"./math":72,"./vectors":76}],71:[function(require,module,exports){
+'use strict';
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+
+function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+
+var _require = require('./vectors'),
+    subtract = _require.subtract,
+    vectorTheta = _require.vectorTheta;
+
+// NOTE: for angles in radians being close to each other!
+var closeTo = function closeTo(a, b) {
+  var normalizedA = a % (2 * Math.PI);
+  var epsilon = 0.00001;
+  return Math.abs(normalizedA - b) < epsilon;
+};
+
+var sameArray = function sameArray(arrayA, arrayB) {
+  if (arrayA.length != arrayB.length) return false;
+  for (var i = 0; i < arrayA.length; i++) {
+    if (arrayA[i] != arrayB[i]) {
+      return false;
+    }
+  }
+  return true;
+};
+
+var thetaToDir = function thetaToDir(theta, noDiagonal) {
+  // 90 degree only:
+  if (noDiagonal) {
+    var _directions = ['left', 'down', 'right', 'up'];
+    var _deg = Math.round(theta * 180 / Math.PI);
+    if (Math.round(_deg / 45) % 2 != 0) return null;
+    return _directions[Math.round(_deg / 90) % 4];
+  }
+
+  // including 45 degree:
+  var directions = ['left', 'leftup', 'up', 'rightup', 'right', 'rightdown', 'down', 'leftdown'];
+  var deg = Math.round(theta * 180 / Math.PI);
+  if (Math.round(deg / 45) != deg / 45) return null;
+  return directions[Math.round(deg / 45) % 8];
+};
+
+var isDiagonalTheta = function isDiagonalTheta(theta) {
+  var dir = thetaToDir(theta);
+  return dir == 'leftdown' || dir == 'rightdown' || dir == 'rightup' || dir == 'leftup';
+};
+
+var isDiagonalMove = function isDiagonalMove(vecA, vecB) {
+  if (vecA == null || vecB == null) return false;
+  return isDiagonalTheta(vectorTheta(subtract(vecA, vecB)));
+};
+
+var encodePosition = function encodePosition(pos) {
+  return "" + pos.x + "," + pos.y;
+};
+
+var decodePosition = function decodePosition(pos) {
+  var _pos$split = pos.split(','),
+      _pos$split2 = _slicedToArray(_pos$split, 2),
+      x = _pos$split2[0],
+      y = _pos$split2[1];
+
+  return { x: x, y: y };
+};
+
+var getDisplayTime = function getDisplayTime(millis) {
+  var seconds = Math.floor(millis / 1000);
+  var minutes = Math.floor(seconds / 60);
+  var leftOverSeconds = seconds - minutes * 60;
+  var leftOverSecondsStr = leftOverSeconds == 0 ? '00' : '' + leftOverSeconds;
+  if (leftOverSeconds < 10 && leftOverSeconds != 0) {
+    leftOverSecondsStr = '0' + leftOverSecondsStr;
+  }
+
+  return minutes + ':' + leftOverSecondsStr;
+};
+
+var throttle = function throttle(func, args, wait) {
+  var inThrottle = false;
+  return function (ev) {
+    if (inThrottle) {
+      return;
+    }
+    func.apply(undefined, _toConsumableArray(args).concat([ev]));
+    inThrottle = true;
+    setTimeout(function () {
+      inThrottle = false;
+    }, wait);
+  };
+};
+
+var debounce = function debounce(func) {
+  var delay = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 300;
+
+  var timerID = null;
+  return function () {
+    for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    if (timerID) {
+      clearTimeout(timerID);
+    }
+    timerID = setTimeout(function () {
+      func.apply(undefined, args);
+      timerID = null;
+    }, delay);
+  };
+};
+
+function deepCopy(obj) {
+  if ((typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) !== 'object' || obj == null) {
+    return obj;
+  }
+
+  var copy = {};
+  for (var key in obj) {
+    if (_typeof(obj[key]) === 'object' && obj[key] != null) {
+      if (Array.isArray(obj[key])) {
+        copy[key] = [];
+        var _iteratorNormalCompletion = true;
+        var _didIteratorError = false;
+        var _iteratorError = undefined;
+
+        try {
+          for (var _iterator = obj[key][Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+            var elem = _step.value;
+
+            copy[key].push(deepCopy(elem));
+          }
+        } catch (err) {
+          _didIteratorError = true;
+          _iteratorError = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion && _iterator.return) {
+              _iterator.return();
+            }
+          } finally {
+            if (_didIteratorError) {
+              throw _iteratorError;
+            }
+          }
+        }
+      } else {
+        copy[key] = deepCopy(obj[key]);
+      }
+    } else {
+      copy[key] = obj[key];
+    }
+  }
+  return copy;
+}
+
+module.exports = {
+  closeTo: closeTo, sameArray: sameArray, thetaToDir: thetaToDir,
+  isDiagonalTheta: isDiagonalTheta, isDiagonalMove: isDiagonalMove,
+  encodePosition: encodePosition, decodePosition: decodePosition,
+  getDisplayTime: getDisplayTime,
+  deepCopy: deepCopy,
+  throttle: throttle, debounce: debounce
+};
+},{"./vectors":76}],72:[function(require,module,exports){
+"use strict";
+
+var clamp = function clamp(val, min, max) {
+  return Math.min(Math.max(val, min), max);
+};
+
+/**
+ * when you want to do A - B, but A must always be >= 0, and you need
+ * to do something different if B > A, then use this function.
+ * Returns a {result, deficit, amount} tuple where
+ * - result is the new value of A after the subtraction, but always >= 0
+ * - deficit is the leftover value if B > A
+ * - amount is how much of operandB successfully subtracted
+ *    (will either equal operandB if deficit = 0 or operandA otherwise,
+ *    unless a step parameter is provided)
+ *
+ * Use the optional step parameter to ensure a minimum leftover
+ * amount that won't be subtracted if B > A. (ie if A is $27 and
+ * B is 3 * $10 of items, then step would be 10 and so
+ * {result: 7, deficit: 3, amount: 20} instead of
+ * {result: 0, deficit: 3, amount: 27})
+ **/
+var subtractWithDeficit = function subtractWithDeficit(operandA, operandB, step) {
+  step = step != null ? step : 1;
+  var result = operandA - operandB;
+  var amount = operandB;
+  var deficit = 0;
+  if (result < 0) {
+    // for reference, results without step:
+    // deficit = -1 * result;
+    // amount = operandA;
+    // result = 0;
+
+    deficit = -1 * result;
+    amount = Math.floor(operandA / step) * step;
+    result = operandA % step;
+  }
+  return { result: result, deficit: deficit, amount: amount };
+};
+
+module.exports = {
+  clamp: clamp,
+  subtractWithDeficit: subtractWithDeficit
+};
+},{}],73:[function(require,module,exports){
+'use strict';
+
+function isIpad() {
+  return navigator.platform == 'MacIntel' && navigator.maxTouchPoints > 0 && !navigator.userAgent.match(/iPhone/i);
+}
+
+function isMobile() {
+  var toMatch = [/Android/i, /webOS/i, /iPhone/i, /iPad/i, /iPod/i, /BlackBerry/i, /Windows Phone/i];
+
+  return toMatch.some(function (toMatchItem) {
+    return navigator.userAgent.match(toMatchItem);
+  }) || isIpad();
+}
+
+function isPhone() {
+  return isMobile() && !isIpad();
+}
+
+// HACK: when we're in electron window.require is a function
+function isElectron() {
+  // return true;
+  return window.require != null;
+}
+
+module.exports = {
+  isElectron: isElectron,
+  isIpad: isIpad,
+  isMobile: isMobile,
+  isPhone: isPhone
+};
+},{}],74:[function(require,module,exports){
+"use strict";
+
+var floor = Math.floor,
+    sqrt = Math.sqrt,
+    random = Math.random,
+    round = Math.round;
+
+
+var rand = function rand() {
+  return random();
+};
+
+// return an integer between min and max, inclusive
+var randomIn = function randomIn(min, max) {
+  return floor(min + rand() * (max - min + 1));
+};
+
+var shamefulGaussian = function shamefulGaussian() {
+  return (rand() + rand() + rand() + rand() + rand() + rand() - 3) / 3;
+};
+var normalIn = function normalIn(min, max) {
+  var gaussian = (shamefulGaussian() + 1) / 2;
+  return floor(min + gaussian * (max - min + 1));
+};
+
+var oneOf = function oneOf(options) {
+  if (options.length === 0) return null;
+  return options[floor(rand() * options.length)];
+};
+
+// weights must be positive
+var weightedOneOf = function weightedOneOf(options, weights) {
+  var cumulativeWeights = [];
+  var sum = 0;
+
+  for (var i = 0; i < options.length; i++) {
+    sum += weights[i];
+    cumulativeWeights.push(sum);
+  }
+
+  var randomVal = randomIn(0, sum - 1) + 1;
+
+  var index = 0;
+  for (; randomVal > cumulativeWeights[index]; index++) {}
+
+  return options[index];
+};
+
+module.exports = {
+  randomIn: randomIn,
+  normalIn: normalIn,
+  oneOf: oneOf,
+  weightedOneOf: weightedOneOf
+};
+},{}],75:[function(require,module,exports){
+'use strict';
+
+function setQueryParam(key, value) {
+  var url = new URL(window.location.href);
+  var searchParams = url.searchParams;
+  searchParams.set(key, value);
+  url.search = searchParams.toString();
+  window.history.pushState({ path: url.toString() }, '', url.toString());
+}
+
+function getQueryParam(key) {
+  var url = new URL(window.location.href);
+  var searchParams = url.searchParams;
+  return searchParams.get(key);
+}
+
+function deleteQueryParam(key) {
+  var url = new URL(window.location.href);
+  var searchParams = url.searchParams;
+  searchParams.delete(key);
+  url.search = searchParams.toString();
+  window.history.pushState({ path: url.toString() }, '', url.toString());
+}
+
+// window.setQueryParam = setQueryParam;
+// window.getQueryParam = getQueryParam;
+
+module.exports = {
+  setQueryParam: setQueryParam,
+  getQueryParam: getQueryParam,
+  deleteQueryParam: deleteQueryParam
+};
+},{}],76:[function(require,module,exports){
+"use strict";
+
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+var cos = Math.cos,
+    sin = Math.sin;
+
+
+var add = function add() {
+  for (var _len = arguments.length, vectors = Array(_len), _key = 0; _key < _len; _key++) {
+    vectors[_key] = arguments[_key];
+  }
+
+  var resultVec = { x: 0, y: 0 };
+  var _iteratorNormalCompletion = true;
+  var _didIteratorError = false;
+  var _iteratorError = undefined;
+
+  try {
+    for (var _iterator = vectors[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+      var v = _step.value;
+
+      resultVec.x += v.x;
+      resultVec.y += v.y;
+    }
+  } catch (err) {
+    _didIteratorError = true;
+    _iteratorError = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion && _iterator.return) {
+        _iterator.return();
+      }
+    } finally {
+      if (_didIteratorError) {
+        throw _iteratorError;
+      }
+    }
+  }
+
+  return resultVec;
+};
+
+var equals = function equals(a, b) {
+  return a.x == b.x && a.y == b.y;
+};
+
+// NOTE: see vectorTheta note if subtracting vectors to find the angle between them
+var subtract = function subtract() {
+  for (var _len2 = arguments.length, vectors = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+    vectors[_key2] = arguments[_key2];
+  }
+
+  var resultVec = _extends({}, vectors[0]);
+  for (var i = 1; i < vectors.length; i++) {
+    resultVec.x -= vectors[i].x;
+    resultVec.y -= vectors[i].y;
+  }
+  return resultVec;
+};
+
+var makeVector = function makeVector(theta, magnitude) {
+  var x = magnitude * cos(theta);
+  var y = magnitude * sin(theta);
+  return { x: x, y: y };
+};
+
+var dist = function dist(vecA, vecB) {
+  return magnitude(subtract(vecA, vecB));
+};
+
+var scale = function scale(vec, scalar) {
+  return { x: vec.x * scalar, y: vec.y * scalar };
+};
+
+var magnitude = function magnitude(vector) {
+  var x = vector.x,
+      y = vector.y;
+
+  return Math.sqrt(x * x + y * y);
+};
+
+// what is the angle of this vector
+// NOTE: that when subtracting two vectors in order to compute the theta
+// between them, the target should be the first argument
+var vectorTheta = function vectorTheta(vector) {
+  // shift domain from [-Math.PI, Math.PI] to [0, 2 * Math.PI]
+  return (2 * Math.PI + Math.atan2(vector.y, vector.x)) % (2 * Math.PI);
+};
+
+var multiply = function multiply() {
+  for (var _len3 = arguments.length, vectors = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+    vectors[_key3] = arguments[_key3];
+  }
+
+  var resultVec = { x: 1, y: 1 };
+  for (var i = 0; i < vectors.length; i++) {
+    resultVec.x *= vectors[i].x;
+    resultVec.y *= vectors[i].y;
+  }
+  return resultVec;
+};
+
+var floor = function floor(vector) {
+  return {
+    x: Math.floor(vector.x),
+    y: Math.floor(vector.y)
+  };
+};
+
+var round = function round(vector) {
+  return {
+    x: Math.round(vector.x),
+    y: Math.round(vector.y)
+  };
+};
+
+var ceil = function ceil(vector) {
+  return {
+    x: Math.ceil(vector.x),
+    y: Math.ceil(vector.y)
+  };
+};
+
+var containsVector = function containsVector(array, vec) {
+  var _iteratorNormalCompletion2 = true;
+  var _didIteratorError2 = false;
+  var _iteratorError2 = undefined;
+
+  try {
+    for (var _iterator2 = array[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+      var vector = _step2.value;
+
+      if (equals(vector, vec)) return true;
+    }
+  } catch (err) {
+    _didIteratorError2 = true;
+    _iteratorError2 = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion2 && _iterator2.return) {
+        _iterator2.return();
+      }
+    } finally {
+      if (_didIteratorError2) {
+        throw _iteratorError2;
+      }
+    }
+  }
+
+  return false;
+};
+
+var abs = function abs(vector) {
+  return {
+    x: Math.abs(vector.x),
+    y: Math.abs(vector.y)
+  };
+};
+
+// given two positions, return a rectangle with the positions at opposite corners
+var toRect = function toRect(posA, posB) {
+  var rect = {
+    position: { x: Math.min(posA.x, posB.x), y: Math.min(posA.y, posB.y) },
+    width: Math.abs(posA.x - posB.x) + 1,
+    height: Math.abs(posA.y - posB.y) + 1
+  };
+  return rect;
+};
+
+var rotate = function rotate(vector, theta) {
+  var x = vector.x,
+      y = vector.y;
+
+  return {
+    x: cos(theta) * x - sin(theta) * y,
+    y: sin(theta) * x + cos(theta) * y
+  };
+};
+
+module.exports = {
+  add: add,
+  subtract: subtract,
+  equals: equals,
+  makeVector: makeVector,
+  scale: scale,
+  dist: dist,
+  magnitude: magnitude,
+  vectorTheta: vectorTheta,
+  multiply: multiply,
+  floor: floor,
+  round: round,
+  ceil: ceil,
+  containsVector: containsVector,
+  toRect: toRect,
+  rotate: rotate,
+  abs: abs
+};
+},{}],77:[function(require,module,exports){
+
+module.exports = {
+  vectors: require('./bin/vectors'),
+  helpers: require('./bin/helpers'),
+  stochastic: require('./bin/stochastic'),
+  grid: require('./bin/gridHelpers'),
+  platform: require('./bin/platform'),
+  math: require('./bin/math'),
+  url: require('./bin/url'),
+}
+
+},{"./bin/gridHelpers":70,"./bin/helpers":71,"./bin/math":72,"./bin/platform":73,"./bin/stochastic":74,"./bin/url":75,"./bin/vectors":76}],78:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -5240,7 +8614,7 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"base64-js":44,"buffer":45,"ieee754":46}],46:[function(require,module,exports){
+},{"base64-js":44,"buffer":78,"ieee754":79}],79:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -5327,7 +8701,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],47:[function(require,module,exports){
+},{}],80:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -5513,7 +8887,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],48:[function(require,module,exports){
+},{}],81:[function(require,module,exports){
 (function (process){(function (){
 /**
  * @license React
@@ -10468,7 +13842,7 @@ if(/^(https?|file):$/.test(protocol)){// eslint-disable-next-line react-internal
 console.info('%cDownload the React DevTools '+'for a better development experience: '+'https://reactjs.org/link/react-devtools'+(protocol==='file:'?'\nYou might need to use a local HTTP server (instead of file://): '+'https://reactjs.org/link/react-devtools-faq':''),'font-weight:bold');}}}}exports.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED=Internals;exports.createPortal=createPortal$1;exports.createRoot=createRoot$1;exports.findDOMNode=findDOMNode;exports.flushSync=flushSync$1;exports.hydrate=hydrate;exports.hydrateRoot=hydrateRoot$1;exports.render=render;exports.unmountComponentAtNode=unmountComponentAtNode;exports.unstable_batchedUpdates=batchedUpdates$1;exports.unstable_renderSubtreeIntoContainer=renderSubtreeIntoContainer;exports.version=ReactVersion;/* global __REACT_DEVTOOLS_GLOBAL_HOOK__ */if(typeof __REACT_DEVTOOLS_GLOBAL_HOOK__!=='undefined'&&typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop==='function'){__REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(new Error());}})();}
 
 }).call(this)}).call(this,require('_process'))
-},{"_process":47,"react":54,"scheduler":57}],49:[function(require,module,exports){
+},{"_process":80,"react":87,"scheduler":90}],82:[function(require,module,exports){
 /**
  * @license React
  * react-dom.production.min.js
@@ -10793,7 +14167,7 @@ exports.hydrateRoot=function(a,b,c){if(!ol(a))throw Error(p(405));var d=null!=c&
 e);return new nl(b)};exports.render=function(a,b,c){if(!pl(b))throw Error(p(200));return sl(null,a,b,!1,c)};exports.unmountComponentAtNode=function(a){if(!pl(a))throw Error(p(40));return a._reactRootContainer?(Sk(function(){sl(null,null,a,!1,function(){a._reactRootContainer=null;a[uf]=null})}),!0):!1};exports.unstable_batchedUpdates=Rk;
 exports.unstable_renderSubtreeIntoContainer=function(a,b,c,d){if(!pl(c))throw Error(p(200));if(null==a||void 0===a._reactInternals)throw Error(p(38));return sl(a,b,c,!1,d)};exports.version="18.2.0-next-9e3b772b8-20220608";
 
-},{"react":54,"scheduler":57}],50:[function(require,module,exports){
+},{"react":87,"scheduler":90}],83:[function(require,module,exports){
 (function (process){(function (){
 'use strict';
 
@@ -10822,7 +14196,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 }).call(this)}).call(this,require('_process'))
-},{"_process":47,"react-dom":51}],51:[function(require,module,exports){
+},{"_process":80,"react-dom":84}],84:[function(require,module,exports){
 (function (process){(function (){
 'use strict';
 
@@ -10864,7 +14238,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 }).call(this)}).call(this,require('_process'))
-},{"./cjs/react-dom.development.js":48,"./cjs/react-dom.production.min.js":49,"_process":47}],52:[function(require,module,exports){
+},{"./cjs/react-dom.development.js":81,"./cjs/react-dom.production.min.js":82,"_process":80}],85:[function(require,module,exports){
 (function (process){(function (){
 /**
  * @license React
@@ -13269,7 +16643,7 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 }).call(this)}).call(this,require('_process'))
-},{"_process":47}],53:[function(require,module,exports){
+},{"_process":80}],86:[function(require,module,exports){
 /**
  * @license React
  * react.production.min.js
@@ -13297,7 +16671,7 @@ exports.useCallback=function(a,b){return U.current.useCallback(a,b)};exports.use
 exports.useInsertionEffect=function(a,b){return U.current.useInsertionEffect(a,b)};exports.useLayoutEffect=function(a,b){return U.current.useLayoutEffect(a,b)};exports.useMemo=function(a,b){return U.current.useMemo(a,b)};exports.useReducer=function(a,b,e){return U.current.useReducer(a,b,e)};exports.useRef=function(a){return U.current.useRef(a)};exports.useState=function(a){return U.current.useState(a)};exports.useSyncExternalStore=function(a,b,e){return U.current.useSyncExternalStore(a,b,e)};
 exports.useTransition=function(){return U.current.useTransition()};exports.version="18.2.0";
 
-},{}],54:[function(require,module,exports){
+},{}],87:[function(require,module,exports){
 (function (process){(function (){
 'use strict';
 
@@ -13308,7 +16682,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 }).call(this)}).call(this,require('_process'))
-},{"./cjs/react.development.js":52,"./cjs/react.production.min.js":53,"_process":47}],55:[function(require,module,exports){
+},{"./cjs/react.development.js":85,"./cjs/react.production.min.js":86,"_process":80}],88:[function(require,module,exports){
 (function (process,setImmediate){(function (){
 /**
  * @license React
@@ -13946,7 +17320,7 @@ if (
 }
 
 }).call(this)}).call(this,require('_process'),require("timers").setImmediate)
-},{"_process":47,"timers":58}],56:[function(require,module,exports){
+},{"_process":80,"timers":91}],89:[function(require,module,exports){
 (function (setImmediate){(function (){
 /**
  * @license React
@@ -13969,7 +17343,7 @@ exports.unstable_scheduleCallback=function(a,b,c){var d=exports.unstable_now();"
 exports.unstable_shouldYield=M;exports.unstable_wrapCallback=function(a){var b=y;return function(){var c=y;y=b;try{return a.apply(this,arguments)}finally{y=c}}};
 
 }).call(this)}).call(this,require("timers").setImmediate)
-},{"timers":58}],57:[function(require,module,exports){
+},{"timers":91}],90:[function(require,module,exports){
 (function (process){(function (){
 'use strict';
 
@@ -13980,7 +17354,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 }).call(this)}).call(this,require('_process'))
-},{"./cjs/scheduler.development.js":55,"./cjs/scheduler.production.min.js":56,"_process":47}],58:[function(require,module,exports){
+},{"./cjs/scheduler.development.js":88,"./cjs/scheduler.production.min.js":89,"_process":80}],91:[function(require,module,exports){
 (function (setImmediate,clearImmediate){(function (){
 var nextTick = require('process/browser.js').nextTick;
 var apply = Function.prototype.apply;
@@ -14059,7 +17433,7 @@ exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate :
   delete immediateIds[id];
 };
 }).call(this)}).call(this,require("timers").setImmediate,require("timers").clearImmediate)
-},{"process/browser.js":47,"timers":58}],59:[function(require,module,exports){
+},{"process/browser.js":80,"timers":91}],92:[function(require,module,exports){
 "use strict";
 
 var _axios = _interopRequireDefault(require("axios"));
@@ -14127,7 +17501,96 @@ module.exports = {
   getAccessToken: getAccessToken,
   axiosInstance: axiosInstance
 };
-},{"./config":60,"axios":1}],60:[function(require,module,exports){
+},{"./config":94,"axios":1}],93:[function(require,module,exports){
+"use strict";
+
+function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
+function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = null != arguments[i] ? arguments[i] : {}; i % 2 ? ownKeys(Object(source), !0).forEach(function (key) { _defineProperty(target, key, source[key]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)) : ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } return target; }
+function _defineProperty(obj, key, value) { key = _toPropertyKey(key); if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+function _toPropertyKey(arg) { var key = _toPrimitive(arg, "string"); return _typeof(key) === "symbol" ? key : String(key); }
+function _toPrimitive(input, hint) { if (_typeof(input) !== "object" || input === null) return input; var prim = input[Symbol.toPrimitive]; if (prim !== undefined) { var res = prim.call(input, hint || "default"); if (_typeof(res) !== "object") return res; throw new TypeError("@@toPrimitive must return a primitive value."); } return (hint === "string" ? String : Number)(input); }
+function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest(); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i]; return arr2; }
+function _iterableToArrayLimit(arr, i) { var _i = null == arr ? null : "undefined" != typeof Symbol && arr[Symbol.iterator] || arr["@@iterator"]; if (null != _i) { var _s, _e, _x, _r, _arr = [], _n = !0, _d = !1; try { if (_x = (_i = _i.call(arr)).next, 0 === i) { if (Object(_i) !== _i) return; _n = !1; } else for (; !(_n = (_s = _x.call(_i)).done) && (_arr.push(_s.value), _arr.length !== i); _n = !0); } catch (err) { _d = !0, _e = err; } finally { try { if (!_n && null != _i["return"] && (_r = _i["return"](), Object(_r) !== _r)) return; } finally { if (_d) throw _e; } } return _arr; } }
+function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
+var React = require('react');
+var _require = require('../auth'),
+  createUser = _require.createUser,
+  axiosInstance = _require.axiosInstance;
+var _require2 = require('bens_ui_components'),
+  TextField = _require2.TextField,
+  Button = _require2.Button;
+var useState = React.useState;
+var CreateUserCard = function CreateUserCard(props) {
+  var style = props.style,
+    onSuccess = props.onSuccess;
+  var _useState = useState(''),
+    _useState2 = _slicedToArray(_useState, 2),
+    username = _useState2[0],
+    setUsername = _useState2[1];
+  var _useState3 = useState(''),
+    _useState4 = _slicedToArray(_useState3, 2),
+    email = _useState4[0],
+    setEmail = _useState4[1];
+  var _useState5 = useState(''),
+    _useState6 = _slicedToArray(_useState5, 2),
+    password = _useState6[0],
+    setPassword = _useState6[1];
+  var _useState7 = useState(null),
+    _useState8 = _slicedToArray(_useState7, 2),
+    createUserMessage = _useState8[0],
+    setCreateUserMessage = _useState8[1];
+  return /*#__PURE__*/React.createElement("div", {
+    style: _objectSpread({}, style)
+  }, "New User:", /*#__PURE__*/React.createElement(TextField, {
+    id: "usernameField",
+    placeholder: "USERNAME",
+    value: username,
+    onChange: setUsername
+  }), /*#__PURE__*/React.createElement(TextField, {
+    id: "passwordField",
+    placeholder: "PASSWORD",
+    value: password,
+    password: true,
+    onChange: setPassword
+  }), /*#__PURE__*/React.createElement(TextField, {
+    id: "emailField",
+    placeholder: "EMAIL",
+    value: email,
+    onChange: setEmail
+  }), /*#__PURE__*/React.createElement(Button, {
+    id: "create",
+    label: "Create User",
+    style: {
+      display: 'inline'
+    },
+    onClick: function onClick() {
+      createUser({
+        username: username,
+        password: password,
+        email: email
+      }).then(function () {
+        setCreateUserMessage(null);
+        onSuccess();
+      })["catch"](function (err) {
+        var _err$response, _err$response$data;
+        var message = 'An Error Occurred';
+        if (err !== null && err !== void 0 && (_err$response = err.response) !== null && _err$response !== void 0 && (_err$response$data = _err$response.data) !== null && _err$response$data !== void 0 && _err$response$data.error) {
+          message = err.response.data.error;
+        } else if (err.message) {
+          message = err.message;
+        }
+        console.log(err);
+        setCreateUserMessage(message);
+      });
+    }
+  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, createUserMessage)));
+};
+module.exports = CreateUserCard;
+},{"../auth":92,"bens_ui_components":69,"react":87}],94:[function(require,module,exports){
 "use strict";
 
 var isLocalHost = true;
@@ -14138,104 +17601,186 @@ module.exports = {
   authURL: isLocalHost ? 'http://localhost:8000' : 'your URL here',
   cookieName: 'benAuthCookie'
 };
-},{}],61:[function(require,module,exports){
+},{}],95:[function(require,module,exports){
 "use strict";
 
+function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
+function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); enumerableOnly && (symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; })), keys.push.apply(keys, symbols); } return keys; }
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = null != arguments[i] ? arguments[i] : {}; i % 2 ? ownKeys(Object(source), !0).forEach(function (key) { _defineProperty(target, key, source[key]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)) : ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } return target; }
+function _defineProperty(obj, key, value) { key = _toPropertyKey(key); if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+function _toPropertyKey(arg) { var key = _toPrimitive(arg, "string"); return _typeof(key) === "symbol" ? key : String(key); }
+function _toPrimitive(input, hint) { if (_typeof(input) !== "object" || input === null) return input; var prim = input[Symbol.toPrimitive]; if (prim !== undefined) { var res = prim.call(input, hint || "default"); if (_typeof(res) !== "object") return res; throw new TypeError("@@toPrimitive must return a primitive value."); } return (hint === "string" ? String : Number)(input); }
+function _createForOfIteratorHelper(o, allowArrayLike) { var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"]; if (!it) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e2) { throw _e2; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = it.call(o); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e3) { didErr = true; err = _e3; }, f: function f() { try { if (!normalCompletion && it["return"] != null) it["return"](); } finally { if (didErr) throw err; } } }; }
+function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest(); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i]; return arr2; }
+function _iterableToArrayLimit(arr, i) { var _i = null == arr ? null : "undefined" != typeof Symbol && arr[Symbol.iterator] || arr["@@iterator"]; if (null != _i) { var _s, _e, _x, _r, _arr = [], _n = !0, _d = !1; try { if (_x = (_i = _i.call(arr)).next, 0 === i) { if (Object(_i) !== _i) return; _n = !1; } else for (; !(_n = (_s = _x.call(_i)).done) && (_arr.push(_s.value), _arr.length !== i); _n = !0); } catch (err) { _d = !0, _e = err; } finally { try { if (!_n && null != _i["return"] && (_r = _i["return"](), Object(_r) !== _r)) return; } finally { if (_d) throw _e; } } return _arr; } }
+function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 var React = require('react');
 var ReactDOM = require('react-dom/client');
-var _require = require('../auth'),
-  login = _require.login,
-  createUser = _require.createUser,
-  axiosInstance = _require.axiosInstance;
-var _require2 = require('../tests'),
-  fullTest = _require2.fullTest;
-window.login = login;
-window.createUser = createUser;
-window.axiosInstance = axiosInstance;
-location.assign(location.origin + '/login');
+var _require = require('bens_ui_components'),
+  Button = _require.Button,
+  Dropdown = _require.Dropdown,
+  Table = _require.Table;
+var CreateUserCard = require('../components/CreateUserCard.react');
+var _require2 = require('../auth'),
+  axiosInstance = _require2.axiosInstance;
+var useState = React.useState,
+  useEffect = React.useEffect,
+  useMemo = React.useMemo;
+var tableNames = ['users'];
+var filterableCols = ['permissionlevel'];
+var maxWidthCols = {
+  username: 20,
+  email: 20,
+  lastLogin: 50
+};
+var rowToKey = function rowToKey(row) {
+  if (!row.hostname || !row.path) return false;
+  return row.hostname + '_' + row.path + '_' + row.map;
+};
+function Main(props) {
+  var _useState = useState('users'),
+    _useState2 = _slicedToArray(_useState, 2),
+    table = _useState2[0],
+    setTable = _useState2[1];
+  var _useState3 = useState([]),
+    _useState4 = _slicedToArray(_useState3, 2),
+    rows = _useState4[0],
+    setRows = _useState4[1];
+  var _useState5 = useState(0),
+    _useState6 = _slicedToArray(_useState5, 2),
+    refresh = _useState6[0],
+    setRefresh = _useState6[1];
+  var _useState7 = useState(true),
+    _useState8 = _slicedToArray(_useState7, 2),
+    inRefresh = _useState8[0],
+    setInRefresh = _useState8[1];
 
-// fullTest("mazer1010");
-
+  // getting data
+  useEffect(function () {
+    axiosInstance.get('/auth/list_users').then(function (res) {
+      // console.log(JSON.stringify(res.data));
+      setInRefresh(false);
+      var rows = [];
+      var _iterator = _createForOfIteratorHelper(res.data),
+        _step;
+      try {
+        var _loop = function _loop() {
+          var row = _step.value;
+          if (row.username == 'admin') {
+            rows.push(row);
+          } else {
+            rows.push(_objectSpread(_objectSpread({}, row), {}, {
+              Delete: /*#__PURE__*/React.createElement(DeleteButton, {
+                onClick: function onClick() {
+                  axiosInstance.post('/auth/delete', {
+                    username: row.username
+                  }).then(function () {
+                    setInRefresh(true);
+                    setRefresh((refresh + 1) % 2);
+                  });
+                }
+              })
+            }));
+          }
+        };
+        for (_iterator.s(); !(_step = _iterator.n()).done;) {
+          _loop();
+        }
+      } catch (err) {
+        _iterator.e(err);
+      } finally {
+        _iterator.f();
+      }
+      setRows(rows);
+    });
+  }, [table, refresh]);
+  var columns = useMemo(function () {
+    var cols = {};
+    var _iterator2 = _createForOfIteratorHelper(rows),
+      _step2;
+    try {
+      for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+        var row = _step2.value;
+        var _loop2 = function _loop2(col) {
+          if (!cols[col]) {
+            cols[col] = {};
+            if (filterableCols.includes(col)) {
+              cols[col].filterable = true;
+            }
+            if (maxWidthCols[col]) {
+              cols[col].maxWidth = maxWidthCols[col];
+            }
+            if (col == 'numLogins' || col == 'permissionlevel') {
+              cols[col].sortFn = function (a, b) {
+                var numA = parseInt(a[col].split(' ')[0]) || 0;
+                var numB = parseInt(b[col].split(' ')[0]) || 0;
+                return numA - numB;
+              };
+            }
+          }
+        };
+        for (var col in row) {
+          _loop2(col);
+        }
+      }
+    } catch (err) {
+      _iterator2.e(err);
+    } finally {
+      _iterator2.f();
+    }
+    return cols;
+  }, [rows, refresh]);
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: '100%',
+      height: '100%',
+      backgroundColor: '#faf8ef',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      paddingTop: 50
+    }
+  }, /*#__PURE__*/React.createElement(CreateUserCard, {
+    onSuccess: function onSuccess() {
+      setInRefresh(true);
+      setRefresh((refresh + 1) % 2);
+    }
+  }), /*#__PURE__*/React.createElement(Table, {
+    style: {
+      width: 'initial',
+      paddingTop: 15
+    },
+    columns: columns,
+    rows: rows
+  }));
+}
+var DeleteButton = function DeleteButton(props) {
+  var _useState9 = useState(false),
+    _useState10 = _slicedToArray(_useState9, 2),
+    areYouSure = _useState10[0],
+    askAreYouSure = _useState10[1];
+  return /*#__PURE__*/React.createElement("span", null, areYouSure ? /*#__PURE__*/React.createElement(Button, {
+    label: "Cancel",
+    onClick: function onClick() {
+      return askAreYouSure(false);
+    }
+  }) : null, /*#__PURE__*/React.createElement(Button, {
+    label: areYouSure ? "Delete" : "X",
+    onClick: function onClick() {
+      if (!areYouSure) {
+        askAreYouSure(true);
+      } else {
+        props.onClick();
+      }
+    }
+  }));
+};
 function renderUI(root) {
-  root.render( /*#__PURE__*/React.createElement("div", null, "Test Page Placeholder"));
+  root.render( /*#__PURE__*/React.createElement(Main, null));
 }
 var root = ReactDOM.createRoot(document.getElementById('container'));
 renderUI(root);
-},{"../auth":59,"../tests":62,"react":54,"react-dom/client":50}],62:[function(require,module,exports){
-"use strict";
-
-var _require = require('./auth'),
-  login = _require.login,
-  createUser = _require.createUser,
-  axiosInstance = _require.axiosInstance;
-var testCreateUser = function testCreateUser(username) {
-  console.log("create user", username || 'mazer1010');
-  return createUser({
-    username: username || 'mazer1010',
-    password: 'hunter2'
-  }).then(console.log)["catch"](console.error);
-};
-var testLogin = function testLogin(username) {
-  console.log("login", username || 'mazer1010');
-  return login(username || 'mazer1010', 'hunter2').then(console.log)["catch"](console.error);
-};
-var testIsAuthed = function testIsAuthed() {
-  console.log("is_authed");
-  return axiosInstance.get('/auth/is_authed').then(console.log)["catch"](console.error);
-};
-var testIsAuthedAsUser = function testIsAuthedAsUser(username) {
-  console.log("is_authed_as_user", username || 'mazer1010');
-  return axiosInstance.get('/auth/is_authed_as_user', {
-    params: {
-      username: username || 'mazer1010'
-    }
-  }).then(console.log)["catch"](console.error);
-};
-var testUpdate = function testUpdate(username) {
-  console.log("update user", username || 'mazer1010');
-  return axiosInstance.post('/auth/update', {
-    username: username || 'mazer1010',
-    email: 'a@b.com'
-  }).then(console.log)["catch"](console.error);
-};
-var testListUsers = function testListUsers() {
-  console.log("list users");
-  return axiosInstance.get('/auth/list_users').then(console.log)["catch"](console.error);
-};
-var fullTest = function fullTest(username) {
-  testIsAuthed().then(function () {
-    // fails
-    return testCreateUser(username); // succeeds unless already created
-  }).then(function () {
-    return testLogin(username); // succeeds
-  }).then(function () {
-    return testIsAuthed(); // succeeds
-  }).then(function () {
-    return testIsAuthedAsUser(username); // succeeds
-  }).then(function () {
-    return testIsAuthedAsUser('admin'); // fails
-  }).then(function () {
-    return testUpdate(username); // succeeds
-  }).then(function () {
-    return testUpdate('admin'); // fails
-  }).then(function () {
-    return testListUsers(); // fails
-  }).then(function () {
-    return testLogin("admin"); // succeeds (fails unless password is changed to correct one)
-  }).then(function () {
-    return testUpdate("mazer1010"); // succeeds
-  }).then(function () {
-    return testListUsers(); // succeeds
-  });
-};
-
-module.exports = {
-  fullTest: fullTest,
-  testCreateUser: testCreateUser,
-  testLogin: testLogin,
-  testIsAuthed: testIsAuthed,
-  testIsAuthedAsUser: testIsAuthedAsUser,
-  testUpdate: testUpdate,
-  testListUsers: testListUsers
-};
-},{"./auth":59}]},{},[61]);
+},{"../auth":92,"../components/CreateUserCard.react":93,"bens_ui_components":69,"react":87,"react-dom/client":83}]},{},[95]);

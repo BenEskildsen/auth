@@ -1,17 +1,15 @@
 
 const React = require('react');
 const ReactDOM = require('react-dom/client');
-const {login, createUser, axiosInstance} = require('./auth');
-
-window.login = login;
-window.createUser = createUser;
-window.axiosInstance = axiosInstance;
+const LoginCard = require('../components/LoginCard.react');
 
 function renderUI(root) {
   root.render(
-    <div>
-      Hello World
-    </div>
+    <LoginCard
+      onSuccess={() => {
+        location.assign(location.origin + '/dashboard');
+      }}
+    />
   );
 }
 

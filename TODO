@@ -1,14 +1,6 @@
 
-  - add rest apis for:
-    - update user
-    - delete user
 
-
-  - add clientside apis for
-    - test them with cookies
-
-
-  - admin panel:
-    - react stuff
-    - admin login for it
-    - table for viewing/editing users
+  - later:
+    - allow log out (deleting token and/or cookie)
+    - allow changing password
+    - token expiration and refreshing

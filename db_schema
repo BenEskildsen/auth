@@ -4,7 +4,7 @@ create table users (
   password varchar(150) not null,
   permissionlevel integer default 1,
   email varchar(80),
-  numLogins integer default 1,
+  numLogins integer default 0,
   createdat timestamp default current_timestamp,
   lastLogin timestamp
 );

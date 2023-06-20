@@ -6,6 +6,13 @@ To set up:
   - add an admin user by modifying the create function on the server.js to have permission level >= 7
     > curl -d "username=admin&password=password" localhost:8000/auth/create
 
+Notes:
+  - creating a user does not automatically log them in
+    This is so that the admin can create users.
+    If you want to undo this, createUser middleware and auth.js createUser have the
+    relevant code commented out (for cookies and jwt respectively)
+    (May also want to keep db_schema numLogins column in sync with this)
+  - UI has hardcoded user table name
 
 Main authentication types:
   - JWT:

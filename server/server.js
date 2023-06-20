@@ -1,18 +1,14 @@
 
 const express = require('express');
 const {
-  writeQuery, selectQuery, updateQuery,
-  deleteQuery,
-} = require('./dbUtils');
-const {
-  validJWTNeeded, validCookieNeeded,
-  minimumPermissionLevelNeeded,
-  thisUserOrAdminNeeded
+  login, createUser,
+  updateUser, deleteUser, listUsers,
+  loginRequired,
+  userLoginRequired,
+  permissionRequired,
+  userLoginOrPermissionRequired,
 } = require('./middleware');
-const crypto = require('crypto');
-const jwt = require('jsonwebtoken');
 const {
-  jwtSecret, AUTH_TYPE, cookieName, userTable,
   adminPermissionLevel,
 } = require('./config');
 const urlParser = require('url');
@@ -22,126 +18,85 @@ const path = require('path');
 
 const port = process.env.PORT || 8000;
 
-const useAuth = AUTH_TYPE == 'COOKIE' ? validCookieNeeded : validJWTNeeded;
-
 process.on('uncaughtException', function (err) {
       console.log(err);
 });
 
 // -------------------------------------------------------------------------
-// Users
+// User Routes
 // -------------------------------------------------------------------------
 const users = express();
 users.use(express.json());
 users.use(express.urlencoded({ extended: false }));
 
-users.post('/create', (req, res) => {
-  const salt = crypto.randomBytes(16).toString('base64');
-  const hash = crypto.createHmac('sha512',salt)
-    .update(req.body.password).digest("base64");
-  req.body.password = salt + "$" + hash;
-  const {username, password, email} = req.body;
-
-  writeQuery(userTable, {username, password, email: email ?? null, permissionLevel: 1})
-    .then(() => {
-      const tokens = getTokens(req);
-      if (AUTH_TYPE == 'COOKIE') {
-        res.cookie(cookieName, tokens.accessToken);
-      }
-      res.status(201).send(tokens);
-    })
-    .catch((err) => {
-      res.status(500).send({error: 'failed to create user (probably duplicate username)'});
-    });
-});
-
-users.post('/login', (req, res) => {
-  const {username} = req.body;
-
-  selectQuery(userTable, ['username', 'password'], {username})
-    .then(result => {
-      if (result.rows.length == 1) {
-        const user = result.rows[0];
-        const passwordFields = user.password.split('$');
-        const salt = passwordFields[0];
-        const hash = crypto.createHmac('sha512', salt)
-          .update(req.body.password).digest("base64");
-        if (hash == passwordFields[1]) {
-          updateQuery('users',
-            {numlogins: 'numlogins + 1', lastlogin: 'current_timestamp'},
-            {username},
-          );
-          const tokens = getTokens(req);
-          if (AUTH_TYPE == 'COOKIE') {
-            res.cookie(cookieName, tokens.accessToken);
-          }
-          res.status(200).send(tokens);
-        } else {
-          res.status(400).send({error: 'Incorrect password'});
-        }
-        return res;
-      } else {
-        res.status(400).send({error: 'No user with this username'});
-      }
-    })
-    .catch((err) => {
-      res.status(500).send({error: 'Unknown login error :('});
-    });
-});
-
-users.post('/update', [
-  useAuth,
-  thisUserOrAdminNeeded,
-  (req, res) => {
-    // TODO: do the update query
-    res.status(200).send(true);
-  }
+users.post('/create', [
+  createUser,
 ]);
 
-users.post('/delete', [
-  useAuth,
-  thisUserOrAdminNeeded,
-  (req, res) => {
-    // TODO: do the update query
-    res.status(200).send(true);
-  }
+users.post('/login', [
+  login,
 ]);
 
 users.get('/is_authed', [
-  useAuth,
-  (req, res) => {
-    res.status(200).send(true);
-  },
+  loginRequired,
+  (req, res) => res.status(200).send(true),
+]);
+
+users.get('/is_authed_as_user', [
+  userLoginRequired,
+  (req, res) => res.status(200).send(true),
+]);
+
+users.post('/update', [
+  loginRequired,
+  userLoginOrPermissionRequired(adminPermissionLevel),
+  updateUser,
+]);
+
+users.post('/delete', [
+  loginRequired,
+  userLoginOrPermissionRequired(adminPermissionLevel),
+  deleteUser,
 ]);
 
 users.get('/list_users', [
-  useAuth,
-  minimumPermissionLevelNeeded(adminPermissionLevel),
-  (req, res) => {
-    selectQuery(userTable, ['username', 'email', 'numlogins', 'lastlogin', 'permissionlevel'], {})
-      .then((result) => {
-        res.status(201).send(result.rows);
-      });
-  },
+  loginRequired,
+  permissionRequired(adminPermissionLevel),
+  listUsers,
 ]);
 
-const getTokens = (req) => {
-  const refreshId = req.body.username + jwtSecret;
-  const salt = crypto.randomBytes(16).toString('base64');
-  const hash = crypto.createHmac('sha512', salt)
-    .update(refreshId).digest("base64");
-  req.body.refreshKey = salt;
-  const accessToken = jwt.sign(req.body, jwtSecret);
-  const b = new Buffer.from(hash);
-  const refreshToken = b.toString('base64');
-  return {accessToken, refreshToken};
-}
-
 
 // -------------------------------------------------------------------------
-// Blog
+// Dashboard
+// -------------------------------------------------------------------------
+const dashboard = express();
+console.log(__dirname);
+
+// dashboard.get('/dashboard
+
+// -------------------------------------------------------------------------
+// App
 // -------------------------------------------------------------------------
 const auth = express();
+auth.use(cookieParser());
+auth.use(express.json());
+auth.use(cors());
+
+// NOTE: only login-required paths need to be specified, everything else
+// gets handled by /
+// NOTE: must go first since preventing fallthrough like this means it checks this
+// authentication before doing anything else
+auth.use('/dashboard', [
+  loginRequired,
+  permissionRequired(adminPermissionLevel),
+  express.static(path.join(__dirname, '../www/dashboard'), {fallthrough: false}),
+]);
+
+auth.use('/auth', users);
+auth.use('/',
+  express.static(path.join(__dirname, '../www'), {fallthrough: false}),
+);
+
 
 if (port != 80) {
   // force https redirect, and don't try to record site visits in prod
@@ -154,11 +109,6 @@ if (port != 80) {
   // })
 }
 
-auth.use(express.static(path.join(__dirname, '../www')));
-auth.use(express.json());
-auth.use(cors());
-auth.use(cookieParser());
-auth.use('/auth', users);
 console.log("server listening on port", port);
 
 auth.listen(port);

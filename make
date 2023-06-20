@@ -1,20 +1,18 @@
-#!/bin/zsh
+#!/bin/bash
 
-# npm run babel -- --plugins transform-react-jsx
-
-mkdir www/bin
-
-npm run babel -- js/ -d www/bin
+# babel transform
+mkdir temp_bin
+npm run babel -- js/ -d temp_bin
 
 # clientside require everything into a single bundle.js file
-npm run browserify -- www/bin/index.js -o www/bin/bundle.js -p esmify
-
-# remove everything but the bundle
-mv www/bin/bundle.js ./
-rm -rf www/bin/
 mkdir www/bin
-# put the bundle back
-mv bundle.js www/bin/
+npm run browserify -- temp_bin/pages/index.js -o www/bin/bundle.js -p esmify
+mkdir www/login/bin
+npm run browserify -- temp_bin/pages/login.js -o www/login/bin/bundle.js -p esmify
+mkdir www/dashboard/bin
+npm run browserify -- temp_bin/pages/dashboard.js -o www/dashboard/bin/bundle.js -p esmify
 
 
 
+# clean up babelified content
+rm -rf temp_bin
