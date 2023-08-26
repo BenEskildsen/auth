@@ -1,20 +1,16 @@
 
 const express = require('express');
 const {
-  login, createUser,
-  updateUser, deleteUser, listUsers,
   loginRequired,
-  userLoginRequired,
   permissionRequired,
-  userLoginOrPermissionRequired,
 } = require('./middleware');
 const {
   adminPermissionLevel,
 } = require('./config');
-const urlParser = require('url');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const path = require('path');
+const {users} = require('./users');
 
 const port = process.env.PORT || 8000;
 
@@ -22,48 +18,6 @@ process.on('uncaughtException', function (err) {
   console.log(err);
 });
 
-// -------------------------------------------------------------------------
-// User Routes
-// -------------------------------------------------------------------------
-const users = express();
-users.use(express.json());
-users.use(express.urlencoded({ extended: false }));
-
-users.post('/create', [
-  createUser,
-]);
-
-users.post('/login', [
-  login,
-]);
-
-users.get('/is_authed', [
-  loginRequired,
-  (req, res) => res.status(200).send(true),
-]);
-
-users.get('/is_authed_as_user', [
-  userLoginRequired,
-  (req, res) => res.status(200).send(true),
-]);
-
-users.post('/update', [
-  loginRequired,
-  userLoginOrPermissionRequired(adminPermissionLevel),
-  updateUser,
-]);
-
-users.post('/delete', [
-  loginRequired,
-  userLoginOrPermissionRequired(adminPermissionLevel),
-  deleteUser,
-]);
-
-users.get('/list_users', [
-  loginRequired,
-  permissionRequired(adminPermissionLevel),
-  listUsers,
-]);
 
 // -------------------------------------------------------------------------
 // App
@@ -77,6 +31,9 @@ auth.use(cors());
 // gets handled by /
 // NOTE: must go first since preventing fallthrough like this means it checks this
 // authentication before doing anything else
+// NOTE: fallthrough: false for static routes means that if you match the given
+// route, but your file doesn't exist, then it will stop looking and just 404.
+// Otherwise, it would keep checking other routes
 auth.use('/dashboard', [
   loginRequired,
   permissionRequired(adminPermissionLevel),

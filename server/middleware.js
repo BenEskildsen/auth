@@ -123,11 +123,13 @@ const loginRequired = (req, res, next) => {
         if (user) {
           next();
         } else {
-          res.status(400).send({error: 'No Such User ' + username});
+          // res.status(400).send({error: 'No Such User ' + username});
+          res.redirect('/login');
         }
       });
   } catch (ex) {
-    res.status(403).send({error: 'Not Logged In ' + ex});
+    res.redirect('/login');
+    // res.status(403).send({error: 'Not Logged In ' + ex});
   }
 }
 
