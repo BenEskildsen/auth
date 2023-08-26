@@ -1,6 +1,4 @@
 
-  - break out user paths into their own express app module
-  - same for dashboard
   - turn into npm package(?)
 
   - later:
