@@ -3,7 +3,8 @@ import axios from 'axios';
 const {authURL, cookieName, AUTH_TYPE} = require('./config');
 
 let axiosInstance = axios.create({
-  baseURL: authURL,
+  // baseURL: authURL,
+  baseURL: location.origin,
   withCredentials: true,
 });
 
